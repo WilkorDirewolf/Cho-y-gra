@@ -125,7 +125,7 @@ class Projectile:
 # INITIALIZATION DATA
 current_state = STATE_EXPLORE
 anim_tick = 0
-active_house = None # Zmienna zapamiętująca dom w którym obecnie jesteśmy
+active_house = None 
 
 # Statystyki gracza
 player_pos = pygame.Vector2(150, 400)
@@ -220,7 +220,6 @@ while running:
                 if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                     current_state = STATE_HOUSE
                     active_house = h
-                    # Przerzucamy gracza do "lokalnego układu współrzędnych" pokoju blisko dołu
                     player_pos = pygame.Vector2(WIDTH // 2, HEIGHT - 130)
                     break
             
@@ -249,10 +248,8 @@ while running:
 
         # Logika wewnątrz domu
         elif current_state == STATE_HOUSE:
-            # Obliczenie odległości do stołu/NPC na środku pokoju
             dist_to_npc = pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2))
             
-            # Rozpoczęcie dialogu (NPC stoi twardo w jednym miejscu w lokalnym widoku)
             if dist_to_npc < 60:
                 current_state = STATE_DIALOGUE
                 dialogue_title = active_house.name
@@ -260,10 +257,8 @@ while running:
                 dialogue_choices = active_house.choices
                 current_choice_idx = 0
             
-            # Wyjście z domu - jeśli gracz dotknie czarnej "ramki" poza domem
             if player_pos.x < 50 or player_pos.x > WIDTH - 50 or player_pos.y < 50 or player_pos.y > HEIGHT - 50:
                 current_state = STATE_EXPLORE
-                # Kładziemy gracza bezpiecznie poniżej drzwi domu na mapie świata
                 player_pos = pygame.Vector2(active_house.door_rect.centerx, active_house.door_rect.bottom + 20)
                 active_house = None
 
@@ -365,7 +360,6 @@ while running:
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_e:
                     choice_code = dialogue_choices[current_choice_idx][1]
                     
-                    # Poprawka: Odsunięcie gracza od NPC by rozmowa nie zapętlała się z automatu
                     if choice_code == "SOLTYS_GOOD": 
                         story_flags["zaufanie_wioski"] += 5
                         current_state = STATE_HOUSE
@@ -418,14 +412,17 @@ while running:
             pygame.draw.rect(screen, (220, 50, 50), (150, 180, WIDTH-300, 350), 3)
             title = font_main.render(f"ZASADZKA! PRZECIWNIK: {active_boss_type}", True, (255, 50, 50))
             screen.blit(title, (WIDTH//2 - title.get_width()//2, 210))
-            p_str = f"Twoj rzut koscmi: Mod. Ataku ({mod_attack: +d}), Mod. Wytrzymalosci ({mod_stamina: +d})"
-            m_str = f"Rzut wroga: Mod. Ataku ({boss_mod_attack: +d}), Mod. Wytrzymalosci ({boss_mod_stamina: +d})"
+            
+            # POPRAWKA: Usunięcie spacji w ":+d" rozwiązuje problem crashu przy walce!
+            p_str = f"Twoj rzut koscmi: Mod. Ataku ({mod_attack:+d}), Mod. Wytrzymalosci ({mod_stamina:+d})"
+            m_str = f"Rzut wroga: Mod. Ataku ({boss_mod_attack:+d}), Mod. Wytrzymalosci ({boss_mod_stamina:+d})"
+            
             screen.blit(font_main.render(p_str, True, (100, 255, 100)), (200, 290))
             screen.blit(font_main.render(m_str, True, (255, 100, 100)), (200, 350))
             prompt = font_main.render("NACISNIJ [ENTER], ABY ROZPOCZAC MINIGIERE WALKI", True, (255, 255, 255))
             screen.blit(prompt, (WIDTH//2 - prompt.get_width()//2, 450))
 
-    # 3B. Rysowanie Wnętrz Budynków (Dom i Dialog ZAWSZE na tle pokoju)
+    # 3B. Rysowanie Wnętrz Budynków
     elif current_state in [STATE_HOUSE, STATE_DIALOGUE]:
         screen.fill((25, 20, 15)) 
         pygame.draw.rect(screen, (45, 35, 25), (50, 50, WIDTH-100, HEIGHT-100), 8) 
