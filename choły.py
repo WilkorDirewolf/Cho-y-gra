@@ -139,7 +139,8 @@ clues_found = {
     "zaufanie_soltysa": False, 
     "zaufanie_zielarki": False, 
     "dowod_kosci": False,
-    "rozmowa_maria": False
+    "rozmowa_maria": False,
+    "mamuna_rozmowa": False  # Nowa flaga dla finałowego wyboru
 }
 
 def get_kapliczka_dialogue():
@@ -291,15 +292,39 @@ while running:
                 for m in monster_triggers_forest:
                     if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
                         active_boss_type = m["type"]
-                        current_state = STATE_DICE_ROLL
-                        p_d1, p_d2, m_d1, m_d2 = random.randint(1,6), random.randint(1,6), random.randint(1,6), random.randint(1,6)
-                        mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
-                        boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
-                        boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
-                        break
+                        
+                        # ZDARZENIE SPECJALNE: Wybór moralny Mamuny
+                        if active_boss_type == BOSS_MAMUNA and not clues_found["mamuna_rozmowa"]:
+                            current_state = STATE_DIALOGUE
+                            dialogue_title = "Leże Mamuny - Konfrontacja"
+                            dialogue_lines = [
+                                "Z mroku wyłania się przerażająca sylwetka... jednak potwór jest dziwnie spokojny.",
+                                "Mamuna z czułością gładzi owinięte w szmaty ludzkie niemowlę po główce...\n",
+                                "Mamuna: Stój, łowco! Dlaczego chcesz mu to odebrać? Ta samica wcale go nie chciała,",
+                                "spaliła w piecu moje rodzone... A to maleństwo pokochałam jak własne!",
+                                "Zostaw nas w spokoju i pozwól mi je odchować, a las nigdy więcej was nie skrzywdzi."
+                            ]
+                            dialogue_choices = [
+                                ("Milcz, potworze! Oddaj dziecko i giń z moich rąk!", "FIGHT_MAMUNA"),
+                                ("Opuść broń. (Zostaw dziecko pod opieką Mamuny)", "SPARE_MAMUNA")
+                            ]
+                            current_choice_idx = 0
+                            clues_found["mamuna_rozmowa"] = True
+                            player_pos.y += 20 # Wycofanie krok w dół
+                            break
+                        else:
+                            # Standardowa walka z pomiotami
+                            current_state = STATE_DICE_ROLL
+                            p_d1, p_d2 = random.randint(1,6), random.randint(1,6)
+                            m_d1, m_d2 = random.randint(1,6), random.randint(1,6)
+                            mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
+                            boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
+                            boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
+                            break
                 
+                # Zwykłe zwycięstwo po wybiciu wszystkich
                 if all(m["beaten"] for m in monster_triggers_forest):
-                    end_message = "Mamuna padła martwa. Las obok Chołów został ostatecznie oczyszczony ze zła."
+                    end_message = "Mamuna padła martwa. Odzyskałeś skradzione dziecko...\nJednak w jego maleńkich oczach widać było już mroczną dzikość lasu.\nZło zostało wyplenione, ale brzemię tej nocy pozostanie w tobie na zawsze."
                     current_state = STATE_END
 
         elif current_state == STATE_HOUSE:
@@ -356,7 +381,7 @@ while running:
             combat_projectiles.clear()
             combat_bullets.clear()
         elif player_hp <= 0:
-            end_message = "Ciało Drozda dołączyło do ofiar Lasu..."
+            end_message = "Ciało Drozda dołączyło do rosnącej listy ofiar Przeklętego Lasu..."
             current_state = STATE_END
 
     # 2. EVENTY
@@ -401,7 +426,6 @@ while running:
                     
                     elif c_code == "TALK_MARIA":
                         clues_found["rozmowa_maria"] = True
-                        # Natychmiastowe odświeżenie dialogu Marii
                         dialogue_title = "Plebania - Rozmowa z Marią"
                         t, c = get_ksiadz_dialogue()
                         dialogue_lines, dialogue_choices = [t], c
@@ -412,6 +436,22 @@ while running:
                         current_state = STATE_TRANSITION
                         continue
                     
+                    # Logika dla wyboru finałowego Mamuny
+                    elif c_code == "FIGHT_MAMUNA":
+                        current_state = STATE_DICE_ROLL
+                        active_boss_type = BOSS_MAMUNA
+                        p_d1, p_d2 = random.randint(1,6), random.randint(1,6)
+                        m_d1, m_d2 = random.randint(1,6), random.randint(1,6)
+                        mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
+                        boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
+                        boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
+                        continue
+
+                    elif c_code == "SPARE_MAMUNA":
+                        end_message = "Drozd opuścił las, zostawiając dziecko istocie, która być może kochała je bardziej\nniż biologiczna matka... Mroczna tajemnica Chołów połączyła dwa światy na zawsze."
+                        current_state = STATE_END
+                        continue
+
                     current_state = STATE_HOUSE
                     player_pos.y += 70 
 
@@ -485,7 +525,7 @@ while running:
             
             pygame.draw.rect(screen, (20, 25, 20), (10, 10, 310, 50))
             pygame.draw.rect(screen, (80, 120, 70), (10, 10, 310, 50), 2)
-            screen.blit(font_sub.render("Głęboki Las: Wyeliminuj 4 pomioty zła", True, (150, 255, 150)), (20, 20))
+            screen.blit(font_sub.render("Głęboki Las: Rozwiąż sprawę", True, (150, 255, 150)), (20, 20))
 
         if current_state == STATE_DICE_ROLL:
             pygame.draw.rect(screen, (10, 10, 15), (150, 180, WIDTH-300, 350))
@@ -498,7 +538,7 @@ while running:
     elif current_state in [STATE_HOUSE, STATE_DIALOGUE]:
         screen.fill((25, 20, 15)) 
         pygame.draw.rect(screen, (45, 35, 25), (50, 50, WIDTH-100, HEIGHT-100), 8) 
-        if active_house.ruined:
+        if active_house and active_house.ruined:
             pygame.draw.rect(screen, (30, 25, 25), (WIDTH//2 - 50, HEIGHT//2 - 40, 100, 80))
             pygame.draw.circle(screen, (10, 10, 10), (WIDTH//2, HEIGHT//2), 30)
         else:
@@ -510,8 +550,12 @@ while running:
             pygame.draw.rect(screen, (15, 12, 10), (50, 430, WIDTH-100, 240))
             pygame.draw.rect(screen, (140, 110, 80), (50, 430, WIDTH-100, 240), 4)
             screen.blit(font_main.render(dialogue_title, True, (255, 215, 0)), (80, 445))
-            for idx, l in enumerate(dialogue_lines[0].split('\n')):
-                screen.blit(font_sub.render(l, True, (230, 220, 210)), (80, 480 + idx*22))
+            
+            # Bezpieczne renderowanie tekstu dialogu
+            for dialog_line in dialogue_lines:
+                for idx, l in enumerate(dialog_line.split('\n')):
+                    screen.blit(font_sub.render(l, True, (230, 220, 210)), (80, 480 + idx*22))
+            
             for idx, choice in enumerate(dialogue_choices):
                 color = (255, 255, 100) if idx == current_choice_idx else (140, 140, 140)
                 screen.blit(font_sub.render((" > " if idx == current_choice_idx else "   ") + choice[0], True, color), (80, 580 + idx * 25))
@@ -538,9 +582,15 @@ while running:
     elif current_state == STATE_END:
         screen.fill((15, 10, 10))
         title_surf = font_main.render("ZAKOŃCZENIE ŚLEDZTWA", True, (200, 50, 50))
-        screen.blit(title_surf, (WIDTH//2 - title_surf.get_width()//2, HEIGHT//2 - 60))
-        msg_surf = font_sub.render(end_message, True, (220, 220, 200))
-        screen.blit(msg_surf, (WIDTH//2 - msg_surf.get_width()//2, HEIGHT//2))
+        screen.blit(title_surf, (WIDTH//2 - title_surf.get_width()//2, HEIGHT//2 - 80))
+        
+        # Wielolinijkowe renderowanie wiadomości końcowej
+        for idx, line in enumerate(end_message.split('\n')):
+            msg_surf = font_sub.render(line, True, (220, 220, 200))
+            screen.blit(msg_surf, (WIDTH//2 - msg_surf.get_width()//2, HEIGHT//2 - 20 + idx*30))
+            
+        exit_surf = font_sub.render("[ Wciśnij ESC, aby zamknąć ]", True, (100, 100, 100))
+        screen.blit(exit_surf, (WIDTH//2 - exit_surf.get_width()//2, HEIGHT - 100))
 
     pygame.display.flip()
 
