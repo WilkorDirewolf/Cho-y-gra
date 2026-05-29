@@ -19,7 +19,7 @@ STATE_HOUSE = "HOUSE"
 STATE_DIALOGUE = "DIALOGUE"
 STATE_DICE_ROLL = "DICE_ROLL"
 STATE_COMBAT = "COMBAT"
-STATE_END = "END" # <--- NOWY STAN ZAKOŃCZENIA
+STATE_END = "END" 
 
 # Zmienna przechowująca skutek decyzji na końcu
 end_message = ""
@@ -30,7 +30,7 @@ BOSS_LATARNIK = "LATARNIK"
 BOSS_PIEN = "PIEN"
 BOSS_KRZYKACZ = "KRZYKACZ"
 
-# --- ZASOBY AUDIO (ARCHITEKTURA DYNAMICZNEJ MUZYKI) ---
+# --- ZASOBY AUDIO ---
 current_music_state = None
 def play_dynamic_music(state_type):
     global current_music_state
@@ -39,9 +39,8 @@ def play_dynamic_music(state_type):
     current_music_state = state_type
     print(f"[AUDIO LOG]: Zmiana muzyki na styl: {state_type}")
 
-# --- PROCEDURALNY SILNIK GRAFICZNY (ZAAWANSOWANE RYSOWANIE) ---
+# --- PROCEDURALNY SILNIK GRAFICZNY ---
 def draw_drozd(surface, x, y):
-    """Rysuje Jerzego Drozda: Płaszcz, twarz, pas, buty i mroczny kapelusz wędrowca."""
     pygame.draw.rect(surface, (20, 20, 20), (x + 6, y + 34, 6, 8))
     pygame.draw.rect(surface, (20, 20, 20), (x + 18, y + 34, 6, 8))
     pygame.draw.rect(surface, (45, 50, 65), (x + 2, y + 14, 26, 22))
@@ -53,7 +52,6 @@ def draw_drozd(surface, x, y):
     pygame.draw.rect(surface, (25, 25, 30), (x + 6, y - 2, 18, 6))
 
 def draw_slavic_house(surface, x, y, width, height):
-    """Rysuje chatę wiejską z bali drewnianych, strzechą, drzwiami i oknem."""
     pygame.draw.rect(surface, (85, 55, 35), (x, y + 30, width, height - 30))
     for i in range(y + 35, y + height, 12):
         pygame.draw.line(surface, (50, 30, 15), (x, i), (x + width, i), 2)
@@ -65,7 +63,6 @@ def draw_slavic_house(surface, x, y, width, height):
     pygame.draw.polygon(surface, (60, 45, 30), [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)], 2)
 
 def draw_monster_latarnik(surface, x, y, anim_tick):
-    """Rysuje Latarnika: Lewitujący upiór w podartym całunie trzymający krwawą latarnię."""
     offset_y = int(math.sin(anim_tick * 0.1) * 5)
     pygame.draw.polygon(surface, (50, 50, 50), [(x, y+20+offset_y), (x+15, y-5+offset_y), (x+30, y+20+offset_y), (x+25, y+45+offset_y), (x+5, y+45+offset_y)])
     pygame.draw.circle(surface, (210, 210, 190), (x + 15, y + offset_y), 8)
@@ -78,7 +75,6 @@ def draw_monster_latarnik(surface, x, y, anim_tick):
     pygame.draw.circle(surface, (255, 200, 200), (lantern_x, lantern_y + 10), 4)
 
 def draw_monster_pien(surface, x, y):
-    """Rysuje Pień: Stary, spękany hubami pień z zakorzenioną paszczą."""
     pygame.draw.rect(surface, (55, 45, 40), (x, y, 40, 50))
     pygame.draw.ellipse(surface, (35, 25, 20), (x, y - 5, 40, 15))
     pygame.draw.line(surface, (180, 20, 20), (x + 10, y + 15), (x + 30, y + 25), 3)
@@ -86,7 +82,6 @@ def draw_monster_pien(surface, x, y):
     pygame.draw.circle(surface, (200, 0, 0), (x + 20, y + 20), 1)
 
 def draw_monster_mamuna(surface, x, y, anim_tick):
-    """Rysuje Mamunę: Bagienną wiedźmę o nienaturalnie długich kończynach."""
     offset_x = int(math.sin(anim_tick * 0.08) * 3)
     pygame.draw.ellipse(surface, (20, 45, 25), (x - 5 + offset_x, y + 5, 40, 40))
     pygame.draw.circle(surface, (140, 155, 120), (x + 15 + offset_x, y), 9)
@@ -96,14 +91,12 @@ def draw_monster_mamuna(surface, x, y, anim_tick):
     pygame.draw.line(surface, (100, 120, 90), (x + 25, y + 20), (x + 40 + offset_x, y + 35), 2)
 
 def draw_monster_krzykacz(surface, x, y, anim_tick):
-    """Rysuje Krzykacza: Widmową, lewitującą postać z rozwartą paszczą."""
     scale = 1.0 + math.sin(anim_tick * 0.2) * 0.08
     w, h = int(35 * scale), int(45 * scale)
     pygame.draw.ellipse(surface, (70, 40, 85), (x - w//2 + 15, y - h//2 + 20, w, h))
     pygame.draw.circle(surface, (10, 5, 15), (x + 15, y + 22), int(8 * scale))
     pygame.draw.circle(surface, (255, 255, 255), (x + 7, y + 10), 3)
     pygame.draw.circle(surface, (255, 255, 255), (x + 23, y + 10), 3)
-
 
 # --- KLASY MAPY I LOGIKI ---
 class House:
@@ -156,14 +149,14 @@ dialogue_choices = []
 current_choice_idx = 0
 story_flags = {"spalona_chata_zbadana": False, "zaufanie_wioski": 0}
 
-# Budynki (Zaktualizowane o łamanie linii w tekście)
+# Budynki (Dodano więcej podziałów na nowe linie dla lepszej czytelności)
 houses = [
     House(100, 120, 160, 110, "Chata Sołtysa", 
-          "Sołtys: Coś gnębi naszą wieś od lasu...\nLatarnik mami podróżnych, a Krzykacz nie daje spać nocami.\nPomożesz nam?",
+          "Sołtys: Coś gnębi naszą wieś od lasu...\nLatarnik mami podróżnych,\na Krzykacz nie daje spać nocami. Pomożesz nam?",
           [("Obiecuję pozbyć się potworów (Dobra ścieżka)", "SOLTYS_GOOD"), 
            ("Zrobię to wyłącznie dla zapłaty (Ścieżka Najemnika)", "SOLTYS_GREED")]),
     House(550, 150, 140, 100, "Stara Zielarka", 
-          "Zielarka: Czuję od Ciebie zapach śmierci, miastowy.\nJeśli ruszysz na Mamunę, strzeż się jej pieśni hipnotycznej.",
+          "Zielarka: Czuję od Ciebie zapach śmierci, miastowy.\nJeśli ruszysz na Mamunę,\nstrzeż się jej pieśni hipnotycznej.",
           [("Weź amulet ochronny (-10 monet)", "AMULET"), ("Odejdź bez słowa", "LEAVE")])
 ]
 
@@ -221,12 +214,14 @@ while running:
             player_pos.x = max(20, min(WIDTH-20, player_pos.x))
             player_pos.y = max(20, min(HEIGHT-20, player_pos.y))
             
+            # Wchodzenie do budynków
             for h in houses:
                 if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                     current_state = STATE_HOUSE
                     player_pos = pygame.Vector2(h.rect.x + h.rect.width//2, h.rect.y + h.rect.height - 30)
                     break
             
+            # Startowanie walki
             for m in monster_triggers:
                 if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
                     active_boss_type = m["type"]
@@ -241,6 +236,13 @@ while running:
                     boss_hp = 100 + (boss_mod_stamina * 5)
                     boss_max_hp = boss_hp
                     break
+            
+            # SPRAWDZENIE CZY WYGRALIŚMY GRĘ
+            if all(m["beaten"] for m in monster_triggers):
+                end_message = "Pokonałeś wszystkie potwory! Wioska Choły jest znów bezpieczna."
+                if story_flags["zaufanie_wioski"] > 0:
+                    end_message += " Zostałeś bohaterem."
+                current_state = STATE_END
 
         elif current_state == STATE_HOUSE:
             in_any_house = False
@@ -274,28 +276,24 @@ while running:
                 dy = player_combat_pos.y - 220
                 dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
                 combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*6, (dy/dist)*6, (255, 60, 0), 7))
-            
             if combat_timer % 60 == 0:
                 boss_hp -= (base_attack + mod_attack)
 
         elif active_boss_type == BOSS_MAMUNA:
             if combat_timer % 50 == 0:
                 combat_projectiles.append(Projectile(WIDTH//2, 250, 0, 0, (100, 255, 100), 10))
-            
             for p in combat_projectiles:
                 if p.vx == 0 and p.vy == 0:
                     p.radius += 3 
                     if p.radius > 220: combat_projectiles.remove(p)
                     elif p.radius - 10 < player_combat_pos.distance_to(pygame.Vector2(WIDTH//2, 250)) < p.radius + 10:
                         player_hp -= max(1, 3 + boss_mod_attack)
-            
             if combat_timer % 60 == 0:
                 boss_hp -= (base_attack + mod_attack)
 
         elif active_boss_type == BOSS_PIEN:
             if combat_timer % 30 == 0:
                 combat_projectiles.append(Projectile(player_combat_pos.x + random.randint(-20,20), player_combat_pos.y + random.randint(-20,20), 0, 0, (139, 69, 19), 2))
-            
             for p in combat_projectiles:
                 if p.color == (139, 69, 19):
                     p.radius += 0.5
@@ -303,7 +301,6 @@ while running:
                         if pygame.Vector2(p.x, p.y).distance_to(player_combat_pos) < 25:
                             player_hp -= max(1, 8 + boss_mod_attack)
                         combat_projectiles.remove(p)
-            
             if combat_timer % 60 == 0:
                 boss_hp -= (base_attack + mod_attack)
 
@@ -312,7 +309,6 @@ while running:
                 for angle in range(0, 360, 60):
                     rad = math.radians(angle)
                     combat_projectiles.append(Projectile(WIDTH//2, 220, math.cos(rad)*4, math.sin(rad)*4, (200, 100, 255), 6))
-            
             if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
                 combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -8, (255, 255, 255), 4))
                 
@@ -340,8 +336,8 @@ while running:
             combat_projectiles.clear()
             combat_bullets.clear()
         elif player_hp <= 0:
-            print("Jerzy Drozd poległ w Chołach...")
-            running = False
+            end_message = "Jerzy Drozd poległ w Chołach... Zostałeś pokonany."
+            current_state = STATE_END
 
     # ==========================================
     # 2. EVENT LOOP
@@ -352,7 +348,6 @@ while running:
             
         elif event.type == pygame.KEYDOWN:
             
-            # --- DODANA LOGIKA DIALOGÓW I ZAKOŃCZENIA ---
             if current_state == STATE_DIALOGUE:
                 if event.key == pygame.K_w or event.key == pygame.K_UP:
                     current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
@@ -361,26 +356,26 @@ while running:
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_e:
                     choice_code = dialogue_choices[current_choice_idx][1]
                     
+                    # ZMIANA: Zamiast kończyć grę, gracz wraca do domu (i eksploracji) by walczyć
                     if choice_code == "SOLTYS_GOOD": 
                         story_flags["zaufanie_wioski"] += 5
-                        end_message = "Wybrałeś dobro. Obiecałeś pomoc bezinteresownie, co daje nadzieję Chołom."
-                        current_state = STATE_END
+                        current_state = STATE_HOUSE
+                        player_pos.y += 50 
                     elif choice_code == "SOLTYS_GREED": 
                         story_flags["zaufanie_wioski"] -= 2
-                        end_message = "Wybrałeś złoto. Wioska jest rozczarowana Twoją chciwością, ale zapłaci."
-                        current_state = STATE_END
+                        current_state = STATE_HOUSE
+                        player_pos.y += 50 
                     elif choice_code == "AMULET": 
                         player_hp = min(120, player_hp + 20)
                         current_state = STATE_HOUSE
-                        player_pos.y += 50 # Odsunięcie gracza, by uniknąć zapętlenia
+                        player_pos.y += 50 
                     elif choice_code == "LEAVE":
                         current_state = STATE_HOUSE
-                        player_pos.y += 50 # Odsunięcie gracza, by uniknąć zapętlenia
+                        player_pos.y += 50
 
             elif current_state == STATE_END:
                 if event.key == pygame.K_ESCAPE:
                     running = False
-            # ----------------------------------------------
             
             elif current_state == STATE_DICE_ROLL:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
@@ -446,24 +441,26 @@ while running:
             screen.blit(font_sub.render("[STRZAŁKI] - Unikaj ataków i przetrwaj, by zadać ciosy!", True, (255, 200, 200)), (WIDTH//2 - 180, HEIGHT - 45))
 
     elif current_state == STATE_DIALOGUE:
-        pygame.draw.rect(screen, (15, 12, 10), (50, 450, WIDTH-100, 200))
-        pygame.draw.rect(screen, (180, 140, 90), (50, 450, WIDTH-100, 200), 4)
+        pygame.draw.rect(screen, (15, 12, 10), (50, 450, WIDTH-100, 220))
+        pygame.draw.rect(screen, (180, 140, 90), (50, 450, WIDTH-100, 220), 4)
         
         t_surf = font_main.render(dialogue_title, True, (255, 215, 0))
-        screen.blit(t_surf, (80, 470))
+        screen.blit(t_surf, (80, 465))
         
+        # POPRAWKA 1: Generowanie tekstu NPC ze złamaniem wierszy 
         lines = dialogue_lines[0].split('\n')
         for idx, l in enumerate(lines):
             l_surf = font_sub.render(l, True, (230, 220, 210))
-            screen.blit(l_surf, (80, 510 + idx*22))
+            screen.blit(l_surf, (80, 500 + idx*22))
             
+        # POPRAWKA 2: Przeniesienie opcji wyboru POD główny tekst (zamiast obok)
         for idx, choice in enumerate(dialogue_choices):
             color = (255, 255, 100) if idx == current_choice_idx else (140, 140, 140)
             prefix = " > " if idx == current_choice_idx else "   "
             c_surf = font_sub.render(prefix + choice[0], True, color)
-            screen.blit(c_surf, (500, 510 + idx * 30))
+            screen.blit(c_surf, (80, 580 + idx * 25))
             
-        screen.blit(font_sub.render("[W/S] Wybór  [ENTER] Potwierdź", True, (100, 100, 100)), (80, 615))
+        screen.blit(font_sub.render("[W/S] Wybór  [ENTER] Potwierdź", True, (100, 100, 100)), (80, 640))
 
     elif current_state == STATE_DICE_ROLL:
         pygame.draw.rect(screen, (10, 10, 15), (150, 180, WIDTH-300, 350))
@@ -481,11 +478,10 @@ while running:
         prompt = font_main.render("NACIŚNIJ [ENTER], ABY ROZPOCZĄĆ MINIGIERĘ WALKI", True, (255, 255, 255))
         screen.blit(prompt, (WIDTH//2 - prompt.get_width()//2, 450))
     
-    # --- DODANE RENDEROWANIE ZAKOŃCZENIA ---
     elif current_state == STATE_END:
         screen.fill((15, 10, 10))
         
-        title_surf = font_main.render("KONIEC ROZDZIAŁU", True, (200, 50, 50))
+        title_surf = font_main.render("KONIEC", True, (200, 50, 50))
         screen.blit(title_surf, (WIDTH//2 - title_surf.get_width()//2, HEIGHT//2 - 60))
         
         msg_surf = font_sub.render(end_message, True, (220, 220, 200))
@@ -493,7 +489,6 @@ while running:
         
         exit_surf = font_sub.render("[Naciśnij ESC aby zamknąć grę]", True, (100, 100, 100))
         screen.blit(exit_surf, (WIDTH//2 - exit_surf.get_width()//2, HEIGHT - 50))
-    # ---------------------------------------
 
     pygame.display.flip()
 
