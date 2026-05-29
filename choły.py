@@ -201,11 +201,21 @@ def get_kapliczka_dialogue():
             [("Zabierz sztylet", "CLUE_DAGGER"), ("Zostaw go", "LEAVE")])
 
 def get_soltys_dialogue():
-    if clues_found["zaufanie_soltysa"]: return ("Sołtys: Idź do Zielarki. Powiedz, że ja cię przysłałem.", [("Odejdź", "LEAVE")])
-    return ("Sołtys: Czego tu szukasz? Wilki zjadły małego, to wielka tragedia.", [("Wrócę później.", "LEAVE")])
+    if clues_found["zaufanie_soltysa"]: 
+        return ("Sołtys: Idź do Zielarki. Powiedz, że ja cię przysłałem.", [("Odejdź", "LEAVE")])
+    
+    choices = [("Wybacz najście. (Odejdź)", "LEAVE")]
+    if clues_found["zardzewialy_sztylet"]:
+        choices.insert(0, ("Znalazłem ten zardzewiały sztylet. Co to znaczy?", "SHOW_DAGGER"))
+    
+    return ("Sołtys: Czego tu szukasz, miastowy? Wilki zjadły małego, to wielka tragedia.", choices)
 
 def get_zielarka_dialogue():
-    if clues_found["zaufanie_zielarki"]: return ("Zielarka: Użyj tego Amuletu przeciw demonom... [ZDOBYTO AMULET]", [("Odejdź", "CLUE_AMULET")])
+    if clues_found["zaufanie_zielarki"]: 
+        if clues_found["ma_amulet_zielarki"]:
+            return ("Zielarka: Szukaj w spalonej chacie, głupcze.", [("Odejdź", "LEAVE")])
+        return ("Zielarka: Użyj tego Amuletu przeciw demonom... [ZDOBYTO AMULET]", [("Schowaj amulet i odejdź", "CLUE_AMULET")])
+    
     if clues_found["zaufanie_soltysa"]:
         return ("Zielarka: Bieniasz cię przysłał? Zapłać 5 zł, a wskażę ci ruinę.", 
                 [("Zapłać za wskazówkę (5 zł)", "PAY_ZIELARKA"), ("Odejdź", "LEAVE")])
@@ -556,23 +566,80 @@ while running:
                     if not c_code and len(dialogue_choices) > 0:
                         c_code = dialogue_choices[current_choice_idx][1]
                     
-                    if c_code == "CLUE_TOTEM": clues_found["znaleziono_totem"] = True
-                    elif c_code == "CLUE_DAGGER": clues_found["zardzewialy_sztylet"] = True
+                    # Logika wyjścia z budynku/dialogu
+                    if c_code == "LEAVE":
+                        if current_map == "VILLAGE":
+                            current_state = STATE_HOUSE
+                            player_pos.y += 70 
+                        else:
+                            current_state = STATE_EXPLORE
+                            player_pos.y += 20
+                        continue
+
+                    # Zbieranie i interakcje z poszlakami w wiosce
+                    elif c_code == "CLUE_TOTEM": 
+                        clues_found["znaleziono_totem"] = True
+                        c_code = "LEAVE"
+                        
+                    elif c_code == "CLUE_DAGGER": 
+                        clues_found["zardzewialy_sztylet"] = True
+                        dialogue_title = "Zdobycz!"
+                        dialogue_lines = ["Zabrałeś Zardzewiały Sztylet. Aż mrowi od niego w palcach..."]
+                        dialogue_choices = [("Schowaj", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "SHOW_DAGGER":
+                        dialogue_title = "Zaufanie Sołtysa"
+                        dialogue_lines = ["Sołtys blednie na widok ostrza.", "'Więc to prawda... Las się budzi. Idź do starej Zielarki.'"]
+                        dialogue_choices = [("Dziękuję.", "TRUST_SOLTYS")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "TRUST_SOLTYS":
+                        clues_found["zaufanie_soltysa"] = True
+                        current_state = STATE_HOUSE
+                        player_pos.y += 70
+                        continue
+
                     elif c_code == "CLUE_AMULET": 
                         clues_found["ma_amulet_zielarki"] = True
                         current_state = STATE_EXPLORE
+                        player_pos.y += 70
                         continue
+                        
                     elif c_code and c_code.startswith("PAY_"):
                         if player_money >= 5:
                             player_money -= 5
-                            if c_code == "PAY_ZIELARKA": clues_found["zaufanie_zielarki"] = True
+                            if c_code == "PAY_ZIELARKA": 
+                                clues_found["zaufanie_zielarki"] = True
+                                dialogue_title = "Wiedza kupiona"
+                                dialogue_lines = ["Zielarka chowa monety.", "'Przeszukaj piec w spalonej chacie Marii...'"]
+                                dialogue_choices = [("Ruszaj", "LEAVE")]
+                                current_choice_idx = 0
+                                continue
                         else:
-                            dialogue_lines = ["Nie masz czym zapłacić..."]
+                            dialogue_lines = ["Nie masz wystarczająco złota..."]
                             dialogue_choices = [("Odejdź...", "LEAVE")]
                             current_choice_idx = 0
                             continue
-                    elif c_code == "CLUE_KOSCI": clues_found["dowod_kosci"] = True
-                    elif c_code == "SLEEP": player_hp = player_max_hp
+                            
+                    elif c_code == "CLUE_KOSCI": 
+                        clues_found["dowod_kosci"] = True
+                        dialogue_title = "Makabryczne Odkrycie"
+                        dialogue_lines = ["Zabezpieczasz nadpalone kości odmieńca. Ksiądz musi o tym wiedzieć!"]
+                        dialogue_choices = [("Schowaj do torby", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "SLEEP": 
+                        player_hp = player_max_hp
+                        dialogue_title = "Odpoczynek"
+                        dialogue_lines = ["Przespałeś się na starym łóżku. Twoje rany się zagoiły."]
+                        dialogue_choices = [("Wstań", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
                     elif c_code == "TALK_MARIA":
                         clues_found["rozmowa_maria"] = True
                         dialogue_title = "Rozmowa z Marią"
@@ -580,6 +647,7 @@ while running:
                         dialogue_lines, dialogue_choices = [t], c
                         current_choice_idx = 0
                         continue
+                        
                     elif c_code == "GO_TO_FOREST":
                         current_state = STATE_TRANSITION
                         continue
@@ -609,7 +677,7 @@ while running:
                     elif c_code == "CROSS_DECISION":
                         dialogue_title = "Rozwidlenie Ścieżek"
                         dialogue_lines = ["Wybierz mądrze co dalej."]
-                        dialogue_choices = [("Wróc do eksploracji", "LEAVE")]
+                        dialogue_choices = [("Wróć do eksploracji", "LEAVE")]
                         if clues_found["rozmowa_pien"]: dialogue_choices.append(("Idź zniszczyć Latarnika", "START_LATARNIK_FIGHT"))
                         if clues_found["rozmowa_gawron"]: dialogue_choices.append(("Idź do leża Krzykacza", "START_KRZYKACZ_FIGHT"))
                         if clues_found["rozmowa_skrzekacz"]: dialogue_choices.append(("Próbuj zwerbować Lusię (Teleport)", "RECRUIT_LUSIA"))
@@ -760,13 +828,6 @@ while running:
                         runner_timer = 0
                         continue
 
-                    if current_map == "VILLAGE":
-                        current_state = STATE_HOUSE
-                        player_pos.y += 70 
-                    else:
-                        current_state = STATE_EXPLORE
-                        player_pos.y += 20
-
             elif current_state == STATE_END:
                 if event.key == pygame.K_ESCAPE: running = False
 
@@ -804,6 +865,14 @@ while running:
                 draw_well(screen, 490, 420)
                 for h in houses:
                     draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
+                
+                # HUD (Złoto i HP) Drozda na zewnątrz w wiosce
+                if current_state == STATE_EXPLORE:
+                    screen.blit(font_main.render(f"Sakiewka: {player_money} zł", True, (255, 215, 0)), (20, 20))
+                    pygame.draw.rect(screen, (50, 0, 0), (20, 50, 150, 15))
+                    pygame.draw.rect(screen, (200, 50, 50), (20, 50, 150 * (player_hp / player_max_hp), 15))
+                    pygame.draw.rect(screen, (200, 200, 200), (20, 50, 150, 15), 1)
+                    screen.blit(font_sub.render("Zdrowie Drozda", True, (255, 255, 255)), (20, 70))
         
         elif current_map == "FOREST":
             screen.fill((20, 25, 20))
