@@ -10,7 +10,7 @@ pygame.mixer.init()
 # Konfiguracja okna
 WIDTH, HEIGHT = 950, 700
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Krzykacz: Tajemnica Chołów - Śledztwo RPG")
+pygame.display.set_caption("Krzykacz: Umysł Marii - Thriller Psychologiczny")
 clock = pygame.time.Clock()
 
 # --- STANY GRY ---
@@ -18,26 +18,19 @@ STATE_INTRO = "INTRO"
 STATE_EXPLORE = "EXPLORE"
 STATE_HOUSE = "HOUSE"
 STATE_DIALOGUE = "DIALOGUE"
+STATE_TRANSITION = "TRANSITION"
 STATE_DICE_ROLL = "DICE_ROLL"
 STATE_COMBAT = "COMBAT"
 STATE_END = "END" 
 
+current_map = "VILLAGE" # "VILLAGE" lub "HOSPITAL"
 end_message = ""
 
 # --- TYPY WALKI ---
-BOSS_MAMUNA = "MAMUNA"
-BOSS_LATARNIK = "LATARNIK"
-BOSS_PIEN = "PIEN"
-BOSS_KRZYKACZ = "KRZYKACZ"
-
-# --- ZASOBY AUDIO ---
-current_music_state = None
-def play_dynamic_music(state_type):
-    global current_music_state
-    if current_music_state == state_type:
-        return
-    current_music_state = state_type
-    print(f"[AUDIO LOG]: Zmiana muzyki na styl: {state_type}")
+BOSS_MAMUNA = "MAMUNA (Winna Odmieńca)"
+BOSS_LATARNIK = "LATARNIK (Cień Macieja)"
+BOSS_PIEN = "PIEN (Trauma Pożaru)"
+BOSS_KRZYKACZ = "KRZYKACZ (Szaleństwo)"
 
 # --- PROCEDURALNY SILNIK GRAFICZNY ---
 def draw_drozd(surface, x, y):
@@ -61,14 +54,12 @@ def draw_slavic_house(surface, x, y, width, height, roof_color=(110, 90, 60), ru
     
     pygame.draw.rect(surface, (40, 25, 10) if not ruined else (15, 15, 15), (x + width//2 - 15, y + height - 40, 30, 40))
     if not ruined:
-        pygame.draw.circle(surface, (200, 160, 40), (x + width//2 + 10, y + height - 20), 2)
-        pygame.draw.rect(surface, (220, 140, 30), (x + 20, y + 45, 25, 25))
-        pygame.draw.rect(surface, (30, 20, 10), (x + 20, y + 45, 25, 25), 2)
+        if width > 130: # Dla plebanii dodajemy okno
+            pygame.draw.rect(surface, (220, 140, 30), (x + 20, y + 45, 25, 25))
+            pygame.draw.rect(surface, (30, 20, 10), (x + 20, y + 45, 25, 25), 2)
         pygame.draw.polygon(surface, roof_color, [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)])
     else:
-        # Zrujnowany, dziurawy dach
         pygame.draw.polygon(surface, (50, 45, 45), [(x - 10, y + 30), (x + width // 3, y + 5), (x + width + 10, y + 30)])
-    
     pygame.draw.polygon(surface, (60, 45, 30) if not ruined else (10, 10, 10), [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)], 2)
 
 def draw_zuk(surface, x, y):
@@ -81,7 +72,6 @@ def draw_zuk(surface, x, y):
     pygame.draw.circle(surface, (100, 100, 100), (x + 50, y + 90), 8)
     pygame.draw.circle(surface, (20, 20, 20), (x + 170, y + 90), 22)
     pygame.draw.circle(surface, (100, 100, 100), (x + 170, y + 90), 8)
-    pygame.draw.circle(surface, (255, 255, 180), (x + 215, y + 65), 7)
 
 def draw_tree(surface, x, y):
     pygame.draw.rect(surface, (50, 35, 25), (x + 12, y + 24, 8, 16))
@@ -96,10 +86,9 @@ def draw_well(surface, x, y):
     pygame.draw.polygon(surface, (130, 65, 40), [(x - 4, y + 4), (x + 22, y - 12), (x + 49, y + 4)])
 
 def draw_monster_shadow(surface, x, y, anim_tick):
-    # Mglisty, pulsujący cień potwora przed odkryciem prawdy
     radius = int(15 + math.sin(anim_tick * 0.1) * 4)
     alpha_surf = pygame.Surface((60, 60), pygame.SRCALPHA)
-    pygame.draw.circle(alpha_surf, (80, 20, 90, 100), (30, 30), radius)
+    pygame.draw.circle(alpha_surf, (80, 20, 90, 80), (30, 30), radius)
     surface.blit(alpha_surf, (x - 10, y - 5))
 
 def draw_monster_latarnik(surface, x, y, anim_tick):
@@ -108,76 +97,90 @@ def draw_monster_latarnik(surface, x, y, anim_tick):
     pygame.draw.circle(surface, (210, 210, 190), (x + 15, y + offset_y), 8)
     pygame.draw.circle(surface, (150, 0, 0), (x + 12, y - 1 + offset_y), 2)
     pygame.draw.circle(surface, (150, 0, 0), (x + 18, y - 1 + offset_y), 2)
-    lantern_x = x + 35 + int(math.sin(anim_tick * 0.05) * 3)
-    lantern_y = y + 15 + offset_y
-    pygame.draw.line(surface, (10, 10, 10), (x + 20, y + 10 + offset_y), (lantern_x, lantern_y), 2)
-    pygame.draw.circle(surface, (255, 30, 30), (lantern_x, lantern_y + 10), 10)
-    pygame.draw.circle(surface, (255, 200, 200), (lantern_x, lantern_y + 10), 4)
 
 def draw_monster_pien(surface, x, y):
     pygame.draw.rect(surface, (55, 45, 40), (x, y, 40, 50))
-    pygame.draw.ellipse(surface, (35, 25, 20), (x, y - 5, 40, 15))
     pygame.draw.line(surface, (180, 20, 20), (x + 10, y + 15), (x + 30, y + 25), 3)
     pygame.draw.circle(surface, (255, 255, 255), (x + 20, y + 20), 3)
-    pygame.draw.circle(surface, (200, 0, 0), (x + 20, y + 20), 1)
 
 def draw_monster_mamuna(surface, x, y, anim_tick):
     offset_x = int(math.sin(anim_tick * 0.08) * 3)
     pygame.draw.ellipse(surface, (20, 45, 25), (x - 5 + offset_x, y + 5, 40, 40))
     pygame.draw.circle(surface, (140, 155, 120), (x + 15 + offset_x, y), 9)
-    pygame.draw.circle(surface, (255, 255, 255), (x + 11 + offset_x, y - 1), 2)
-    pygame.draw.circle(surface, (255, 255, 255), (x + 18 + offset_x, y - 1), 2)
 
 def draw_monster_krzykacz(surface, x, y, anim_tick):
     scale = 1.0 + math.sin(anim_tick * 0.2) * 0.08
     w, h = int(35 * scale), int(45 * scale)
     pygame.draw.ellipse(surface, (70, 40, 85), (x - w//2 + 15, y - h//2 + 20, w, h))
     pygame.draw.circle(surface, (10, 5, 15), (x + 15, y + 22), int(8 * scale))
-    pygame.draw.circle(surface, (255, 255, 255), (x + 7, y + 10), 3)
-    pygame.draw.circle(surface, (255, 255, 255), (x + 23, y + 10), 3)
-
-# --- KLASY GRAFICZNE I DIALOGOWE ---
-class House:
-    def __init__(self, x, y, w, h, name, npc_text, choices, roof_color=(110, 90, 60), ruined=False):
-        self.rect = pygame.Rect(x, y, w, h)
-        self.door_rect = pygame.Rect(x + w//2 - 15, y + h - 15, 30, 20)
-        self.name = name
-        self.npc_text = npc_text
-        self.choices = choices
-        self.roof_color = roof_color
-        self.ruined = ruined
 
 class Projectile:
-    def __init__(self, x, y, vx, vy, color=(255, 50, 50), radius=5):
-        self.x, self.y = x, y
-        self.vx, self.vy = vx, vy
-        self.color = color
-        self.radius = radius
+    def __init__(self, x, y, vx, vy, color, radius=5):
+        self.x, self.y, self.vx, self.vy, self.color, self.radius = x, y, vx, vy, color, radius
     def update(self):
         self.x += self.vx
         self.y += self.vy
     def draw(self, surface):
         pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.radius)
 
-# --- INICJACJA DANYCH SYSTEMOWYCH ---
+class House:
+    def __init__(self, x, y, w, h, name, dialog_func, roof_color=(110, 90, 60), ruined=False):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.door_rect = pygame.Rect(x + w//2 - 15, y + h - 15, 30, 20)
+        self.name = name
+        self.dialog_func = dialog_func
+        self.roof_color = roof_color
+        self.ruined = ruined
+
+# --- DANE FABULARNE ---
+clues_found = {"soltys": False, "zielarka": False, "ruiny": False}
+
+def get_soltys_dialogue():
+    return ("Sołtys Bieniasz: Wilki zjadły małego? Taa, tak najwygodniej mówić gminie.\nIdź pogadaj z tą starą wiedźmą, Zielarką, albo zbadaj zgliszcza chaty Marii na wschodzie.\nNikt tam od pożaru nie zaglądał.", 
+            [("Zbadam ten ślad (Zapisz wskazówkę Sołtysa)", "CLUE_SOLTYS")])
+
+def get_zielarka_dialogue():
+    return ("Zielarka: Wilki? Bzdura! Tam wydarzyła się czysta, ludzka i nieludzka tragedia.\nSpalona chata Marii kryje w sobie prawdę gorszą niż dzikie zwierzęta.\nSprawdź piec...", 
+            [("Zanotuj słowa Zielarki (Zapisz wskazówkę)", "CLUE_ZIELARKA")])
+
+def get_ruiny_dialogue():
+    return ("Osmalone ściany potęgują odór dawnego pożaru. W zrujnowanym piecu chlebowym,\npośród popiołu, widzisz drobne, zwęglone kości...\nIch budowa jest niepokojąca. Kształt czaszki... To nie było ludzkie niemowlę.", 
+            [("Zabezpiecz dowód z pieca (Zapisz dowód)", "CLUE_RUINY")])
+
+def get_ksiadz_dialogue():
+    if clues_found["soltys"] and clues_found["zielarka"] and clues_found["ruiny"]:
+        return ("Ksiądz Proboszcz: Widzę, że odkryłeś prawdę, panie Drozd.\nMaria i Maciej czekali na dziecko. Byli szczęśliwi. Ale tamtej nocy głupi Maciej\notworzył okno w pokoju dziecka, żeby zapalić. Wtedy weszła Mamuna...\nPodmieniła ich syna na odmieńca. Gdy Maria rano zobaczyła potworka, oszalała.\nSpaliła go w piecu, a z nim całą chatę. Zawieźli ją do zakładu w Choroszczy.", 
+                [("Jestem psychologiem klinicznym. Muszę z nią pomówić. (Jedź do Choroszczy)", "GO_TO_CHOROSZCZ")])
+    else:
+        return ("Ksiądz Proboszcz: Szczęść Boże, przybyszu.\nWioska skrywa mrok, ale musisz najpierw zbadać zgliszcza i wypytać mieszkańców,\nzanim wyjawię ci całą, bolesną prawdę.", 
+                [("Wrócę, gdy dowiem się więcej.", "LEAVE")])
+
+def get_bed_dialogue():
+    return ("To twoje posłanie w starej chacie po Mikołaju.\nChcesz odpocząć?", [("Prześpij się (Regeneracja HP)", "SLEEP"), ("Wyjdź", "LEAVE")])
+
+houses = [
+    House(250, 60, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue),
+    House(140, 320, 130, 90, "Chata po starym Mikołaju", get_bed_dialogue),
+    House(780, 80, 140, 100, "Namiot Starej Zielarki", get_zielarka_dialogue),
+    House(720, 320, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, ruined=True),
+    House(60, 480, 150, 130, "Plebania", get_ksiadz_dialogue, roof_color=(120, 40, 30))
+]
+
+decorations_trees = [(40, 260), (50, 500), (420, 110), (360, 180), (460, 240), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
+well_pos = pygame.Vector2(490, 420)
+village_shadows = [(450, 560), (820, 120), (750, 550), (70, 560)]
+
+monster_triggers_hospital = [
+    {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_MAMUNA, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ, "beaten": False}
+]
+
+# Zmienne ogólne
 current_state = STATE_INTRO
 anim_tick = 0
 active_house = None 
-
-# System Śledztwa i Prawdy Fabularnej
-clues_found = {"soltys": False, "zielarka": False, "ruiny": False}
-investigation_complete = False
-
-intro_step = 0
-intro_sequence = [
-    {"title": "Wnętrze Żuka. Czuć zapach tanich fajek, benzyny i leśnej wilgoci.", 
-     "text": "Kierowca Władek: Mówię ci, panie Drozd. W Chołach to się porobiło niezłe bagno.\nDzieciaka w lesie znaleźli... rozszarpanego. Oficjalnie ponoć wilki zeszły z gór."},
-    {"title": "Silnik rzęzi, a ciemny las za szybą zdaje się zacieśniać wokół auta.", 
-     "text": "Kierowca Władek: Ale baby we wsi swoje wiedzą. Coś tu śmierdzi kłamstwem na kilometr.\nLudzie boją się własnego cienia. Ja stąd spadam przed zmrokiem."},
-    {"title": "Błotnista droga przed chatą sołtysa. Wokół panuje nienaturalna cisza.", 
-     "text": "Sołtys Piotr Bieniasz: Kolejny miastowy węszy... Słuchaj, Drozd.\nDostaniesz klucz do starej chaty po Mikołaju na skraju wsi. Zszedł na zawał parę lat temu.\nRozejrzyj się, popytaj, ale nie obiecuj sobie za wiele po tych bękartach z Chołów."}
-]
-
 player_pos = pygame.Vector2(215, 410) 
 player_hp, player_max_hp = 100, 100
 base_attack, mod_attack, mod_stamina = 10, 0, 0
@@ -186,58 +189,34 @@ active_boss_type = None
 boss_hp, boss_max_hp = 100, 100
 boss_mod_attack, boss_mod_stamina = 0, 0
 
-dialogue_title = ""
-dialogue_lines = []
-dialogue_choices = []
+dialogue_title, dialogue_lines, dialogue_choices = "", [], []
 current_choice_idx = 0
 
-# Lokacje budynków
-houses = [
-    House(80, 100, 160, 110, "Dom Sołtysa Bieniasza", 
-          "Sołtys Bieniasz: Wilki zjadły małego? Taa, tak najwygodniej mówić gminie.\nIdź pogadaj z tą starą wiedźmą, Zielarką, albo zobacz spaloną chatę Elżbiety na wschodzie.\nNikt tam od roku nie wchodzi, odkąd uciekła do lasu.",
-          [("Zbadam ten ślad (Zapisz wskazówkę Sołtysa)", "CLUE_SOLTYS")]),
-    
-    House(140, 320, 130, 90, "Chata po starym Mikołaju", 
-          "Twoja kryjówka. Pachnie stęchłym kurzem, ale łóżko jest całe.\nChcesz odpocząć?",
-          [("Prześpij się (Regeneracja HP)", "SLEEP"), ("Wyjdź", "LEAVE")]),
-    
-    House(480, 80, 140, 100, "Namiot Starej Zielarki", 
-          "Zielarka: Wilki? Głupcy wierzą w wilki! Bestie szanują krew, a tam była czysta nienawiść.\nTo jej rodzona matka, Elżbieta! Krzykacz odebrał jej rozum.\nNapaliła w piecu chlebowym i wrzuciła małego żywcem... Słyszałam ten pisk...",
-          [("Wysłuchaj wstrząsającej prawdy (Zapisz wskazówkę Zielarki)", "CLUE_ZIELARKA")]),
-    
-    House(720, 320, 150, 110, "Spalona Chata Elżbiety", 
-          "Osmalone ściany potęgują odór dawnego spalonego mięsa.\nW centralnym punkcie stoi zrujnowany piec chlebowy.\nW środku, pośród popiołu, widzisz drobne, zwęglone ludzkie kości...",
-          [("Przeszukaj piec chlebowy (Zapisz dowód ze zgliszcz)", "CLUE_RUINY")], ruined=True)
-]
-
-# Dekoracje na mapie (Drzewa i Studnia)
-decorations_trees = [(40, 260), (50, 500), (320, 110), (360, 180), (410, 240), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
-well_pos = pygame.Vector2(450, 420)
-
-monster_triggers = [
-    {"rect": pygame.Rect(450, 560, 40, 50), "type": BOSS_LATARNIK, "beaten": False},
-    {"rect": pygame.Rect(820, 120, 40, 50), "type": BOSS_PIEN, "beaten": False},
-    {"rect": pygame.Rect(750, 550, 40, 50), "type": BOSS_MAMUNA, "beaten": False},
-    {"rect": pygame.Rect(70, 560, 40, 50), "type": BOSS_KRZYKACZ, "beaten": False}
-]
-
-combat_projectiles = []
+combat_projectiles, combat_bullets = [], []
 combat_timer = 0
 player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 100)
-combat_bullets = [] 
 
 font_main = pygame.font.SysFont("georgia", 20)
 font_sub = pygame.font.SysFont("arial", 15)
 font_title = pygame.font.SysFont("georgia", 24, bold=True)
 
-# Generowanie tła makiety wsi
+intro_step = 0
+intro_sequence = [
+    {"title": "Wnętrze Żuka. Czuć benzynę.", "text": "Kierowca Władek: Mówię ci, panie Drozd. W Chołach to się porobiło niezłe bagno.\nDzieciaka w lesie znaleźli... rozszarpanego. Oficjalnie ponoć wilki."},
+    {"title": "Droga błotnista, pełna cieni.", "text": "Władek: Ale baby we wsi swoje wiedzą. Coś tu śmierdzi kłamstwem.\nJako psycholog powinieneś pogadać z ludźmi. Tu każdy coś ukrywa.\nJa stąd spadam, tuż przed zmrokiem."}
+]
+
+transition_step = 0
+transition_sequence = [
+    {"title": "Trasa do Choroszczy...", "text": "Drozd odpala Żuka i odjeżdża z Chołów. Jako psycholog kliniczny wie,\nże prawdziwe potwory rzadko biegają fizycznie po lasach.\nCzasem gnieżdżą się głęboko w złamanym, ludzkim umyśle."},
+    {"title": "Szpital Psychiatryczny", "text": "Sterylna, zamknięta sala w Choroszczy. Maria tkwi w katatonii.\nJej umysł to prawdziwe pole bitwy. Demony podążyły za nią,\nmaterializując się w jej pokoju. Czas wejść w jej koszmar i je zniszczyć."}
+]
+
 terrain_surface = pygame.Surface((WIDTH, HEIGHT))
 for ty in range(0, HEIGHT, 50):
     for tx in range(0, WIDTH, 50):
         base_g = random.randint(25, 38)
         pygame.draw.rect(terrain_surface, (int(base_g*0.85), base_g, int(base_g*0.65)), (tx, ty, 50, 50))
-        if random.random() > 0.88:
-            pygame.draw.line(terrain_surface, (35, 48, 25), (tx+20, ty+20), (tx+22, ty+10), 2)
 
 # --- GŁÓWNA PĘTLA SYSTEMOWA ---
 running = True
@@ -246,64 +225,49 @@ while running:
     dt = clock.tick(60)
     keys = pygame.key.get_pressed()
 
-    # Sprawdzenie postępu śledztwa
-    if not investigation_complete and all(clues_found.values()):
-        investigation_complete = True
-        print("[FABUŁA LOG]: Prawda wyszła na jaw. Koszmary zmaterializowały się na mapie.")
-
-    # ==========================================
-    # 1. OBSŁUGA LOGIKI PORUSZANIA I AKCJI
-    # ==========================================
+    # 1. LOGIKA RUCHU
     if current_state in [STATE_EXPLORE, STATE_HOUSE]:
-        play_dynamic_music("EXPLORE")
         move_vector = pygame.Vector2(0, 0)
         if keys[pygame.K_w] or keys[pygame.K_UP]: move_vector.y -= 4
         if keys[pygame.K_s] or keys[pygame.K_DOWN]: move_vector.y += 4
         if keys[pygame.K_a] or keys[pygame.K_LEFT]: move_vector.x -= 4
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]: move_vector.x += 4
-        
-        if move_vector.length() > 0:
-            player_pos += move_vector.normalize() * 4
+        if move_vector.length() > 0: player_pos += move_vector.normalize() * 4
 
         if current_state == STATE_EXPLORE:
             player_pos.x = max(20, min(WIDTH-20, player_pos.x))
             player_pos.y = max(20, min(HEIGHT-20, player_pos.y))
             
-            # Kolizje z domami i wejście
-            for h in houses:
-                if h.door_rect.collidepoint(player_pos.x, player_pos.y):
-                    current_state = STATE_HOUSE
-                    active_house = h
-                    player_pos = pygame.Vector2(WIDTH // 2, HEIGHT - 130)
-                    break
+            if current_map == "VILLAGE":
+                for h in houses:
+                    if h.door_rect.collidepoint(player_pos.x, player_pos.y):
+                        current_state = STATE_HOUSE
+                        active_house = h
+                        player_pos = pygame.Vector2(WIDTH // 2, HEIGHT - 130)
+                        break
             
-            # Reakcja na potwory
-            for m in monster_triggers:
-                if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
-                    if investigation_complete:
+            elif current_map == "HOSPITAL":
+                for m in monster_triggers_hospital:
+                    if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
                         active_boss_type = m["type"]
                         current_state = STATE_DICE_ROLL
-                        p_dice1, p_dice2 = random.randint(1, 6), random.randint(1, 6)
-                        m_dice1, m_dice2 = random.randint(1, 6), random.randint(1, 6)
-                        mod_attack = (p_dice1 + p_dice2) - 6
-                        mod_stamina = (p_dice1 + p_dice2) // 2
-                        boss_mod_attack = (m_dice1 + m_dice2) - 6
-                        boss_mod_stamina = (m_dice1 + m_dice2) // 2
-                        boss_hp = 100 + (boss_mod_stamina * 5)
-                        boss_max_hp = boss_hp
-                    break
-            
-            if all(m["beaten"] for m in monster_triggers) and investigation_complete:
-                end_message = "Odkryłeś prawdę i zgładziłeś demony zrodzone z koszmaru Chołów. Sprawa zamknięta."
-                current_state = STATE_END
+                        p_d1, p_d2, m_d1, m_d2 = random.randint(1,6), random.randint(1,6), random.randint(1,6), random.randint(1,6)
+                        mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
+                        boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
+                        boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
+                        break
+                
+                if all(m["beaten"] for m in monster_triggers_hospital):
+                    end_message = "Jako psycholog i tropiciel, Drozd oczyścił umysł Marii z koszmaru Chołów."
+                    current_state = STATE_END
 
         elif current_state == STATE_HOUSE:
-            dist_to_npc = pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2))
-            if dist_to_npc < 60:
+            dist = pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2))
+            if dist < 60:
                 current_state = STATE_DIALOGUE
                 dialogue_title = active_house.name
-                dialogue_lines = [active_house.npc_text]
-                dialogue_choices = active_house.choices
+                t, c = active_house.dialog_func()
+                dialogue_lines, dialogue_choices = [t], c
                 current_choice_idx = 0
             
             if player_pos.x < 50 or player_pos.x > WIDTH - 50 or player_pos.y < 50 or player_pos.y > HEIGHT - 50:
@@ -311,11 +275,9 @@ while running:
                 player_pos = pygame.Vector2(active_house.door_rect.centerx, active_house.door_rect.bottom + 20)
                 active_house = None
 
-    # Logika zręcznościowej walki
+    # WALKA
     elif current_state == STATE_COMBAT:
-        play_dynamic_music("BATTLE")
         combat_timer += 1
-        
         c_speed = 5
         if keys[pygame.K_w] or keys[pygame.K_UP]: player_combat_pos.y -= c_speed
         if keys[pygame.K_s] or keys[pygame.K_DOWN]: player_combat_pos.y += c_speed
@@ -324,101 +286,68 @@ while running:
         player_combat_pos.x = max(100, min(WIDTH-100, player_combat_pos.x))
         player_combat_pos.y = max(150, min(HEIGHT-50, player_combat_pos.y))
         
-        if active_boss_type == BOSS_LATARNIK:
-            if combat_timer % 40 == 0:
-                dx = player_combat_pos.x - (WIDTH//2)
-                dy = player_combat_pos.y - 220
-                dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
-                combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*6, (dy/dist)*6, (255, 60, 0), 7))
-            if combat_timer % 60 == 0: boss_hp -= (base_attack + mod_attack)
+        # Proste zasady uszkodzeń dla wszystkich bossów dla zwięzłości
+        if combat_timer % 40 == 0:
+            dx, dy = player_combat_pos.x - (WIDTH//2), player_combat_pos.y - 220
+            dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
+            combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*6, (dy/dist)*6, (255, 60, 0), 8))
+        if combat_timer % 60 == 0: boss_hp -= (base_attack + mod_attack)
+        if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
+            combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -8, (255, 255, 255), 4))
 
-        elif active_boss_type == BOSS_MAMUNA:
-            if combat_timer % 50 == 0:
-                combat_projectiles.append(Projectile(WIDTH//2, 250, 0, 0, (100, 255, 100), 10))
-            for p in combat_projectiles:
-                if p.vx == 0 and p.vy == 0:
-                    p.radius += 3 
-                    if p.radius > 220: combat_projectiles.remove(p)
-                    elif p.radius - 10 < player_combat_pos.distance_to(pygame.Vector2(WIDTH//2, 250)) < p.radius + 10:
-                        player_hp -= max(1, 3 + boss_mod_attack)
-            if combat_timer % 60 == 0: boss_hp -= (base_attack + mod_attack)
-
-        elif active_boss_type == BOSS_PIEN:
-            if combat_timer % 30 == 0:
-                combat_projectiles.append(Projectile(player_combat_pos.x + random.randint(-20,20), player_combat_pos.y + random.randint(-20,20), 0, 0, (139, 69, 19), 2))
-            for p in combat_projectiles:
-                if p.color == (139, 69, 19):
-                    p.radius += 0.5
-                    if p.radius >= 15: 
-                        if pygame.Vector2(p.x, p.y).distance_to(player_combat_pos) < 25:
-                            player_hp -= max(1, 8 + boss_mod_attack)
-                        combat_projectiles.remove(p)
-            if combat_timer % 60 == 0: boss_hp -= (base_attack + mod_attack)
-
-        elif active_boss_type == BOSS_KRZYKACZ:
-            if combat_timer % 45 == 0:
-                for angle in range(0, 360, 60):
-                    rad = math.radians(angle)
-                    combat_projectiles.append(Projectile(WIDTH//2, 220, math.cos(rad)*4, math.sin(rad)*4, (200, 100, 255), 6))
-            if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
-                combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -8, (255, 255, 255), 4))
-                
-            for b in combat_bullets:
-                b.update()
-                if pygame.Vector2(b.x, b.y).distance_to(pygame.Vector2(WIDTH//2, 220)) < 30:
-                    boss_hp -= (base_attack + mod_attack + 2)
-                    combat_bullets.remove(b)
-                elif b.y < 100: combat_bullets.remove(b)
+        for b in combat_bullets:
+            b.update()
+            if pygame.Vector2(b.x, b.y).distance_to(pygame.Vector2(WIDTH//2, 220)) < 30:
+                boss_hp -= (base_attack + mod_attack + 2)
+                combat_bullets.remove(b)
+            elif b.y < 100: combat_bullets.remove(b)
 
         for p in combat_projectiles:
-            if p.vx != 0 or p.vy != 0:
-                p.update()
-                if pygame.Vector2(p.x, p.y).distance_to(player_combat_pos) < 20:
-                    player_hp -= max(1, 5 + boss_mod_attack)
-                    combat_projectiles.remove(p)
-                elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT: combat_projectiles.remove(p)
+            p.update()
+            if pygame.Vector2(p.x, p.y).distance_to(player_combat_pos) < 20:
+                player_hp -= max(1, 6 + boss_mod_attack)
+                combat_projectiles.remove(p)
+            elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT: combat_projectiles.remove(p)
 
         if boss_hp <= 0:
-            for m in monster_triggers:
+            for m in monster_triggers_hospital:
                 if m["type"] == active_boss_type: m["beaten"] = True
             current_state = STATE_EXPLORE
             combat_projectiles.clear()
             combat_bullets.clear()
         elif player_hp <= 0:
-            end_message = "Jerzy Drozd zginął, pochłonięty przez szaleństwo Chołów."
+            end_message = "Umysł Drozda uległ psychozie Marii."
             current_state = STATE_END
 
-    # ==========================================
-    # 2. SEKCJA EVENTÓW KLAWIATURY
-    # ==========================================
+    # 2. EVENTY
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-            
+        if event.type == pygame.QUIT: running = False
         elif event.type == pygame.KEYDOWN:
             if current_state == STATE_INTRO:
                 if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     intro_step += 1
-                    if intro_step >= len(intro_sequence):
+                    if intro_step >= len(intro_sequence): current_state = STATE_EXPLORE
+            
+            elif current_state == STATE_TRANSITION:
+                if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    transition_step += 1
+                    if transition_step >= len(transition_sequence):
+                        current_map = "HOSPITAL"
                         current_state = STATE_EXPLORE
+                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 100)
 
             elif current_state == STATE_DIALOGUE:
-                if event.key in [pygame.K_w, pygame.K_UP]:
-                    current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
-                elif event.key in [pygame.K_s, pygame.K_DOWN]:
-                    current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
+                if event.key in [pygame.K_w, pygame.K_UP]: current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
+                elif event.key in [pygame.K_s, pygame.K_DOWN]: current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
                 elif event.key in [pygame.K_RETURN, pygame.K_e]:
-                    choice_code = dialogue_choices[current_choice_idx][1]
-                    
-                    if choice_code == "CLUE_SOLTYS":
-                        clues_found["soltys"] = True
-                    elif choice_code == "CLUE_ZIELARKA":
-                        clues_found["zielarka"] = True
-                    elif choice_code == "CLUE_RUINY":
-                        clues_found["ruiny"] = True
-                    elif choice_code == "SLEEP":
-                        player_hp = player_max_hp
-                    
+                    c_code = dialogue_choices[current_choice_idx][1]
+                    if c_code == "CLUE_SOLTYS": clues_found["soltys"] = True
+                    elif c_code == "CLUE_ZIELARKA": clues_found["zielarka"] = True
+                    elif c_code == "CLUE_RUINY": clues_found["ruiny"] = True
+                    elif c_code == "SLEEP": player_hp = player_max_hp
+                    elif c_code == "GO_TO_CHOROSZCZ":
+                        current_state = STATE_TRANSITION
+                        continue
                     current_state = STATE_HOUSE
                     player_pos.y += 70 
 
@@ -432,109 +361,96 @@ while running:
                     combat_projectiles.clear()
                     player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
 
-    # ==========================================
-    # 3. RENDEROWANIE EKRANÓW
-    # ==========================================
-    
-    # INTRO CUTSCENKA
+    # 3. RENDEROWANIE
     if current_state == STATE_INTRO:
         screen.fill((12, 15, 12))
-        if intro_step < 2:
-            pygame.draw.rect(screen, (30, 28, 25), (0, HEIGHT//2 + 50, WIDTH, HEIGHT//2))
-            draw_zuk(screen, WIDTH//2 - 100 + int(math.sin(anim_tick * 0.1) * 3), HEIGHT//2 - 60 + int(math.cos(anim_tick * 0.2) * 2))
+        if intro_step < 1: draw_zuk(screen, WIDTH//2 - 100 + int(math.sin(anim_tick * 0.1) * 3), HEIGHT//2 - 60)
         else:
             draw_slavic_house(screen, WIDTH//2 - 100, HEIGHT//2 - 150, 200, 150, roof_color=(130, 50, 40))
             draw_drozd(screen, WIDTH//2 - 40, HEIGHT//2 + 20)
-            pygame.draw.rect(screen, (80, 50, 30), (WIDTH//2 + 20, HEIGHT//2 + 20, 20, 35))
-            pygame.draw.circle(screen, (220, 180, 150), (WIDTH//2 + 30, HEIGHT//2 + 15), 10)
-
-        pygame.draw.rect(screen, (15, 12, 10), (50, HEIGHT - 200, WIDTH-100, 160))
-        pygame.draw.rect(screen, (100, 120, 90), (50, HEIGHT - 200, WIDTH-100, 160), 3)
-        
         title_surf = font_title.render(intro_sequence[intro_step]["title"], True, (180, 200, 180))
         screen.blit(title_surf, (80, HEIGHT - 180))
-        lines = intro_sequence[intro_step]["text"].split('\n')
-        for idx, l in enumerate(lines):
+        for idx, l in enumerate(intro_sequence[intro_step]["text"].split('\n')):
             screen.blit(font_main.render(l, True, (240, 240, 220)), (80, HEIGHT - 130 + idx*30))
-
-    # MAPA ŚWIATA (EKSPLORACJA / KOŚCI)
-    elif current_state in [STATE_EXPLORE, STATE_DICE_ROLL]:
-        screen.blit(terrain_surface, (0, 0))
-        
-        # Rysowanie dekoracji mapy
-        for tx, ty in decorations_trees: draw_tree(screen, tx, ty)
-        draw_well(screen, int(well_pos.x), int(well_pos.y))
-        
-        for h in houses:
-            draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
             
-        # Potwory ujawniają się dopiero po śledztwie
-        for m in monster_triggers:
-            if not m["beaten"]:
-                if investigation_complete:
+    elif current_state == STATE_TRANSITION:
+        screen.fill((10, 12, 18))
+        if transition_step == 0: draw_zuk(screen, WIDTH//2 - 100, HEIGHT//2 - 60)
+        title_surf = font_title.render(transition_sequence[transition_step]["title"], True, (150, 180, 255))
+        screen.blit(title_surf, (80, HEIGHT - 180))
+        for idx, l in enumerate(transition_sequence[transition_step]["text"].split('\n')):
+            screen.blit(font_main.render(l, True, (240, 240, 240)), (80, HEIGHT - 130 + idx*30))
+
+    elif current_state in [STATE_EXPLORE, STATE_DICE_ROLL]:
+        if current_map == "VILLAGE":
+            screen.blit(terrain_surface, (0, 0))
+            for tx, ty in decorations_trees: draw_tree(screen, tx, ty)
+            draw_well(screen, int(well_pos.x), int(well_pos.y))
+            for h in houses: draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
+            for sx, sy in village_shadows: draw_monster_shadow(screen, sx, sy, anim_tick)
+            
+            draw_drozd(screen, int(player_pos.x) - 15, int(player_pos.y) - 20)
+            
+            pygame.draw.rect(screen, (20, 20, 25), (10, 10, 310, 80))
+            pygame.draw.rect(screen, (120, 100, 70), (10, 10, 310, 80), 2)
+            screen.blit(font_sub.render("Śledztwo w Chołach", True, (200, 180, 140)), (20, 15))
+            screen.blit(font_sub.render(f"1. Sołtys: {'[OK]' if clues_found['soltys'] else '[ ]'}", True, (200, 200, 200)), (20, 35))
+            screen.blit(font_sub.render(f"2. Zielarka: {'[OK]' if clues_found['zielarka'] else '[ ]'}", True, (200, 200, 200)), (20, 50))
+            screen.blit(font_sub.render(f"3. Ruiny: {'[OK]' if clues_found['ruiny'] else '[ ]'}", True, (200, 200, 200)), (170, 35))
+            
+        elif current_map == "HOSPITAL":
+            screen.fill((180, 185, 190))
+            for tx in range(0, WIDTH, 100): pygame.draw.line(screen, (160, 165, 170), (tx, 0), (tx, HEIGHT), 2)
+            for ty in range(0, HEIGHT, 100): pygame.draw.line(screen, (160, 165, 170), (0, ty), (WIDTH, ty), 2)
+            
+            # Łóżko i Maria
+            pygame.draw.rect(screen, (220, 220, 220), (WIDTH//2 - 30, HEIGHT//2 - 40, 60, 90), border_radius=5)
+            pygame.draw.rect(screen, (255, 255, 255), (WIDTH//2 - 25, HEIGHT//2 - 35, 50, 25), border_radius=3)
+            pygame.draw.circle(screen, (250, 220, 200), (WIDTH//2, HEIGHT//2 - 25), 10)
+            pygame.draw.circle(screen, (60, 40, 30), (WIDTH//2, HEIGHT//2 - 25), 11, 3)
+            
+            for m in monster_triggers_hospital:
+                if not m["beaten"]:
                     if m["type"] == BOSS_LATARNIK: draw_monster_latarnik(screen, m["rect"].x, m["rect"].y, anim_tick)
                     elif m["type"] == BOSS_PIEN: draw_monster_pien(screen, m["rect"].x, m["rect"].y)
                     elif m["type"] == BOSS_MAMUNA: draw_monster_mamuna(screen, m["rect"].x, m["rect"].y, anim_tick)
                     elif m["type"] == BOSS_KRZYKACZ: draw_monster_krzykacz(screen, m["rect"].x, m["rect"].y, anim_tick)
-                else:
-                    draw_monster_shadow(screen, m["rect"].x, m["rect"].y, anim_tick)
-
-        draw_drozd(screen, int(player_pos.x) - 15, int(player_pos.y) - 20)
-        
-        # Interfejs śledztwa w rogu
-        pygame.draw.rect(screen, (20, 20, 25), (10, 10, 310, 80))
-        pygame.draw.rect(screen, (120, 100, 70), (10, 10, 310, 80), 2)
-        txt_col = (100, 255, 100) if investigation_complete else (200, 180, 140)
-        status_txt = "Koszmary nadeszły!" if investigation_complete else "Śledztwo: Zbierz dowody"
-        screen.blit(font_sub.render(status_txt, True, txt_col), (20, 15))
-        screen.blit(font_sub.render(f"1. Zeznanie Sołtysa: {'[OK]' if clues_found['soltys'] else '[ ]'}", True, (200, 200, 200)), (20, 35))
-        screen.blit(font_sub.render(f"2. Prawda Zielarki: {'[OK]' if clues_found['zielarka'] else '[ ]'}", True, (200, 200, 200)), (20, 50))
-        screen.blit(font_sub.render(f"3. Piec w ruinach: {'[OK]' if clues_found['ruiny'] else '[ ]'}", True, (200, 200, 200)), (170, 35))
+            
+            draw_drozd(screen, int(player_pos.x) - 15, int(player_pos.y) - 20)
+            
+            pygame.draw.rect(screen, (20, 20, 25), (10, 10, 310, 50))
+            pygame.draw.rect(screen, (120, 100, 70), (10, 10, 310, 50), 2)
+            screen.blit(font_sub.render("Choroszcz: Zniszcz demony umysłu", True, (255, 100, 100)), (20, 20))
 
         if current_state == STATE_DICE_ROLL:
             pygame.draw.rect(screen, (10, 10, 15), (150, 180, WIDTH-300, 350))
             pygame.draw.rect(screen, (220, 50, 50), (150, 180, WIDTH-300, 350), 3)
             title = font_main.render(f"ZASADZKA BESTII: {active_boss_type}", True, (255, 50, 50))
             screen.blit(title, (WIDTH//2 - title.get_width()//2, 210))
-            p_str = f"Modyfikatory Walki: Atak ({mod_attack:+d}), Wytrzymałość ({mod_stamina:+d})"
-            m_str = f"Modyfikatory Wroga: Atak ({boss_mod_attack:+d}), Wytrzymałość ({boss_mod_stamina:+d})"
-            screen.blit(font_main.render(p_str, True, (100, 255, 100)), (200, 290))
-            screen.blit(font_main.render(m_str, True, (255, 100, 100)), (200, 350))
-            prompt = font_main.render("NACIŚNIJ [ENTER], ABY PODJĄĆ WALKĘ", True, (255, 255, 255))
-            screen.blit(prompt, (WIDTH//2 - prompt.get_width()//2, 450))
+            screen.blit(font_main.render(f"Atak ({mod_attack:+d}), Wytrz. ({mod_stamina:+d})", True, (100, 255, 100)), (200, 290))
+            screen.blit(font_main.render("NACIŚNIJ [ENTER], ABY WALCZYĆ", True, (255, 255, 255)), (WIDTH//2 - 160, 450))
 
-    # WNĘTRZA BUDYNKÓW / INTERAKCJA
     elif current_state in [STATE_HOUSE, STATE_DIALOGUE]:
         screen.fill((25, 20, 15)) 
         pygame.draw.rect(screen, (45, 35, 25), (50, 50, WIDTH-100, HEIGHT-100), 8) 
-        
-        # Wnętrze (w zależności od ruin)
         if active_house.ruined:
-            pygame.draw.rect(screen, (30, 25, 25), (WIDTH//2 - 50, HEIGHT//2 - 40, 100, 80)) # Piec chlebowy
-            pygame.draw.circle(screen, (10, 10, 10), (WIDTH//2, HEIGHT//2), 30) # Czeluść pieca
+            pygame.draw.rect(screen, (30, 25, 25), (WIDTH//2 - 50, HEIGHT//2 - 40, 100, 80))
+            pygame.draw.circle(screen, (10, 10, 10), (WIDTH//2, HEIGHT//2), 30)
         else:
             pygame.draw.rect(screen, (70, 50, 35), (WIDTH//2 - 40, HEIGHT//2 - 20, 80, 50))
             pygame.draw.circle(screen, (200, 150, 120), (WIDTH//2, HEIGHT//2 - 60), 10)
-        
         draw_drozd(screen, int(player_pos.x) - 15, int(player_pos.y) - 20)
         
-        if current_state == STATE_HOUSE:
-            lbl = font_sub.render("Podejdź bliżej centrum, aby zbadać/rozmawiać. Wyjdź poza ramę okna, aby wyjść.", True, (150, 150, 150))
-            screen.blit(lbl, (70, HEIGHT - 40))
-            
-        elif current_state == STATE_DIALOGUE:
+        if current_state == STATE_DIALOGUE:
             pygame.draw.rect(screen, (15, 12, 10), (50, 450, WIDTH-100, 220))
-            pygame.draw.rect(screen, (140, 110, 80) if not active_house.ruined else (100, 50, 50), (50, 450, WIDTH-100, 220), 4)
+            pygame.draw.rect(screen, (140, 110, 80), (50, 450, WIDTH-100, 220), 4)
             screen.blit(font_main.render(dialogue_title, True, (255, 215, 0)), (80, 465))
-            lines = dialogue_lines[0].split('\n')
-            for idx, l in enumerate(lines):
+            for idx, l in enumerate(dialogue_lines[0].split('\n')):
                 screen.blit(font_sub.render(l, True, (230, 220, 210)), (80, 500 + idx*22))
             for idx, choice in enumerate(dialogue_choices):
                 color = (255, 255, 100) if idx == current_choice_idx else (140, 140, 140)
-                prefix = " > " if idx == current_choice_idx else "   "
-                screen.blit(font_sub.render(prefix + choice[0], True, color), (80, 580 + idx * 25))
+                screen.blit(font_sub.render((" > " if idx == current_choice_idx else "   ") + choice[0], True, color), (80, 590 + idx * 25))
 
-    # ARENA MINIGIER WALKI
     elif current_state == STATE_COMBAT:
         screen.fill((10, 12, 18))
         pygame.draw.rect(screen, (150, 30, 30), (80, 100, WIDTH-160, HEIGHT-160), 3) 
@@ -543,8 +459,7 @@ while running:
         screen.blit(font_sub.render(f"Drozd HP: {player_hp}/{player_max_hp}", True, (255,255,255)), (85, 32))
         pygame.draw.rect(screen, (40, 40, 40), (WIDTH - 330, 30, 250, 20))
         pygame.draw.rect(screen, (160, 30, 160), (WIDTH - 330, 30, int(250 * max(0, boss_hp/boss_max_hp)), 20))
-        screen.blit(font_sub.render(f"{active_boss_type} HP: {int(boss_hp)}", True, (255,255,255)), (WIDTH - 325, 32))
-
+        
         bx, by = WIDTH // 2 - 15, 200
         if active_boss_type == BOSS_LATARNIK: draw_monster_latarnik(screen, bx, by, anim_tick)
         elif active_boss_type == BOSS_PIEN: draw_monster_pien(screen, bx, by)
@@ -555,7 +470,6 @@ while running:
         for b in combat_bullets: b.draw(screen)
         draw_drozd(screen, int(player_combat_pos.x) - 15, int(player_combat_pos.y) - 20)
 
-    # KONIEC GRY
     elif current_state == STATE_END:
         screen.fill((15, 10, 10))
         title_surf = font_main.render("ZAKOŃCZENIE ŚLEDZTWA", True, (200, 50, 50))
