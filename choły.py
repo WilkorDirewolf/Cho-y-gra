@@ -782,11 +782,28 @@ while running:
 
     elif current_state in [STATE_EXPLORE, STATE_HOUSE, STATE_DIALOGUE, STATE_DICE_ROLL]:
         if current_map == "VILLAGE":
-            screen.blit(terrain_surface, (0, 0))
-            for tx, ty in decorations_trees: draw_tree(screen, tx, ty)
-            draw_well(screen, 490, 420)
-            for h in houses:
-                draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
+            if current_state == STATE_HOUSE or (current_state == STATE_DIALOGUE and active_house is not None):
+                # Tło wnętrza
+                screen.fill((10, 10, 12))
+                
+                # Podłoga i ściany
+                pygame.draw.rect(screen, (50, 40, 30), (50, 50, WIDTH - 100, HEIGHT - 100))
+                pygame.draw.rect(screen, (30, 20, 15), (50, 50, WIDTH - 100, HEIGHT - 100), 10)
+                
+                # Środek pokoju z "dywanem" pokazujący graczowi dokąd iść (triggeruje dialog)
+                pygame.draw.circle(screen, (80, 40, 30), (WIDTH//2, HEIGHT//2), 65) 
+                pygame.draw.circle(screen, (200, 180, 150), (WIDTH//2, HEIGHT//2), 20) # Ikonka NPC
+                
+                # Wyświetlanie UI domku
+                house_name = active_house.name if active_house else "Wnętrze"
+                screen.blit(font_title.render("Wnętrze: " + house_name, True, (220, 200, 150)), (70, 70))
+                screen.blit(font_sub.render("Podejdź na środek, aby porozmawiać. Przejdź za krawędź ekranu, by wyjść.", True, (150, 150, 150)), (70, 110))
+            else:
+                screen.blit(terrain_surface, (0, 0))
+                for tx, ty in decorations_trees: draw_tree(screen, tx, ty)
+                draw_well(screen, 490, 420)
+                for h in houses:
+                    draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
         
         elif current_map == "FOREST":
             screen.fill((20, 25, 20))
