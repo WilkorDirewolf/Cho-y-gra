@@ -19,6 +19,10 @@ STATE_HOUSE = "HOUSE"
 STATE_DIALOGUE = "DIALOGUE"
 STATE_DICE_ROLL = "DICE_ROLL"
 STATE_COMBAT = "COMBAT"
+STATE_END = "END" # <--- NOWY STAN ZAKOŃCZENIA
+
+# Zmienna przechowująca skutek decyzji na końcu
+end_message = ""
 
 # --- TYPY WALKI ---
 BOSS_MAMUNA = "MAMUNA"
@@ -152,14 +156,14 @@ dialogue_choices = []
 current_choice_idx = 0
 story_flags = {"spalona_chata_zbadana": False, "zaufanie_wioski": 0}
 
-# Budynki
+# Budynki (Zaktualizowane o łamanie linii w tekście)
 houses = [
     House(100, 120, 160, 110, "Chata Sołtysa", 
-          "Sołtys: Coś gnębi naszą wieś od lasu... Latarnik mami podróżnych, a Krzykacz nie daje spać nocami. Pomożesz nam?",
+          "Sołtys: Coś gnębi naszą wieś od lasu...\nLatarnik mami podróżnych, a Krzykacz nie daje spać nocami.\nPomożesz nam?",
           [("Obiecuję pozbyć się potworów (Dobra ścieżka)", "SOLTYS_GOOD"), 
            ("Zrobię to wyłącznie dla zapłaty (Ścieżka Najemnika)", "SOLTYS_GREED")]),
     House(550, 150, 140, 100, "Stara Zielarka", 
-          "Zielarka: Czuję od Ciebie zapach śmierci, miastowy. Jeśli ruszysz na Mamunę, strzeż się jej pieśni hipnotycznej.",
+          "Zielarka: Czuję od Ciebie zapach śmierci, miastowy.\nJeśli ruszysz na Mamunę, strzeż się jej pieśni hipnotycznej.",
           [("Weź amulet ochronny (-10 monet)", "AMULET"), ("Odejdź bez słowa", "LEAVE")])
 ]
 
@@ -220,7 +224,6 @@ while running:
             for h in houses:
                 if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                     current_state = STATE_HOUSE
-                    # TUTAJ BYŁ BŁĄD - ZAMIENIONO h.width NA h.rect.width ORAZ h.height NA h.rect.height
                     player_pos = pygame.Vector2(h.rect.x + h.rect.width//2, h.rect.y + h.rect.height - 30)
                     break
             
@@ -348,6 +351,8 @@ while running:
             running = False
             
         elif event.type == pygame.KEYDOWN:
+            
+            # --- DODANA LOGIKA DIALOGÓW I ZAKOŃCZENIA ---
             if current_state == STATE_DIALOGUE:
                 if event.key == pygame.K_w or event.key == pygame.K_UP:
                     current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
@@ -355,12 +360,28 @@ while running:
                     current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_e:
                     choice_code = dialogue_choices[current_choice_idx][1]
-                    if choice_code == "SOLTYS_GOOD": story_flags["zaufanie_wioski"] += 5
-                    elif choice_code == "SOLTYS_GREED": story_flags["zaufanie_wioski"] -= 2
-                    elif choice_code == "AMULET": player_hp = min(120, player_hp + 20)
                     
-                    current_state = STATE_HOUSE 
-                    
+                    if choice_code == "SOLTYS_GOOD": 
+                        story_flags["zaufanie_wioski"] += 5
+                        end_message = "Wybrałeś dobro. Obiecałeś pomoc bezinteresownie, co daje nadzieję Chołom."
+                        current_state = STATE_END
+                    elif choice_code == "SOLTYS_GREED": 
+                        story_flags["zaufanie_wioski"] -= 2
+                        end_message = "Wybrałeś złoto. Wioska jest rozczarowana Twoją chciwością, ale zapłaci."
+                        current_state = STATE_END
+                    elif choice_code == "AMULET": 
+                        player_hp = min(120, player_hp + 20)
+                        current_state = STATE_HOUSE
+                        player_pos.y += 50 # Odsunięcie gracza, by uniknąć zapętlenia
+                    elif choice_code == "LEAVE":
+                        current_state = STATE_HOUSE
+                        player_pos.y += 50 # Odsunięcie gracza, by uniknąć zapętlenia
+
+            elif current_state == STATE_END:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+            # ----------------------------------------------
+            
             elif current_state == STATE_DICE_ROLL:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                     current_state = STATE_COMBAT
@@ -424,7 +445,7 @@ while running:
         else:
             screen.blit(font_sub.render("[STRZAŁKI] - Unikaj ataków i przetrwaj, by zadać ciosy!", True, (255, 200, 200)), (WIDTH//2 - 180, HEIGHT - 45))
 
-    if current_state == STATE_DIALOGUE:
+    elif current_state == STATE_DIALOGUE:
         pygame.draw.rect(screen, (15, 12, 10), (50, 450, WIDTH-100, 200))
         pygame.draw.rect(screen, (180, 140, 90), (50, 450, WIDTH-100, 200), 4)
         
@@ -459,6 +480,20 @@ while running:
         
         prompt = font_main.render("NACIŚNIJ [ENTER], ABY ROZPOCZĄĆ MINIGIERĘ WALKI", True, (255, 255, 255))
         screen.blit(prompt, (WIDTH//2 - prompt.get_width()//2, 450))
+    
+    # --- DODANE RENDEROWANIE ZAKOŃCZENIA ---
+    elif current_state == STATE_END:
+        screen.fill((15, 10, 10))
+        
+        title_surf = font_main.render("KONIEC ROZDZIAŁU", True, (200, 50, 50))
+        screen.blit(title_surf, (WIDTH//2 - title_surf.get_width()//2, HEIGHT//2 - 60))
+        
+        msg_surf = font_sub.render(end_message, True, (220, 220, 200))
+        screen.blit(msg_surf, (WIDTH//2 - msg_surf.get_width()//2, HEIGHT//2))
+        
+        exit_surf = font_sub.render("[Naciśnij ESC aby zamknąć grę]", True, (100, 100, 100))
+        screen.blit(exit_surf, (WIDTH//2 - exit_surf.get_width()//2, HEIGHT - 50))
+    # ---------------------------------------
 
     pygame.display.flip()
 
