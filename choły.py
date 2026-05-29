@@ -21,7 +21,6 @@ STATE_DICE_ROLL = "DICE_ROLL"
 STATE_COMBAT = "COMBAT"
 STATE_END = "END" 
 
-# Zmienna przechowująca skutek decyzji na końcu
 end_message = ""
 
 # --- TYPY WALKI ---
@@ -126,6 +125,7 @@ class Projectile:
 # INITIALIZATION DATA
 current_state = STATE_EXPLORE
 anim_tick = 0
+active_house = None # Zmienna zapamiętująca dom w którym obecnie jesteśmy
 
 # Statystyki gracza
 player_pos = pygame.Vector2(150, 400)
@@ -149,15 +149,15 @@ dialogue_choices = []
 current_choice_idx = 0
 story_flags = {"spalona_chata_zbadana": False, "zaufanie_wioski": 0}
 
-# Budynki (Dodano więcej podziałów na nowe linie dla lepszej czytelności)
+# Budynki
 houses = [
-    House(100, 120, 160, 110, "Chata Sołtysa", 
-          "Sołtys: Coś gnębi naszą wieś od lasu...\nLatarnik mami podróżnych,\na Krzykacz nie daje spać nocami. Pomożesz nam?",
-          [("Obiecuję pozbyć się potworów (Dobra ścieżka)", "SOLTYS_GOOD"), 
-           ("Zrobię to wyłącznie dla zapłaty (Ścieżka Najemnika)", "SOLTYS_GREED")]),
+    House(100, 120, 160, 110, "Chata Soltysa", 
+          "Soltys: Cos gnebi nasza wies od lasu...\nLatarnik mami podroznych,\na Krzykacz nie daje spac nocami. Pomozesz nam?",
+          [("Obiecuje pozbyc sie potworow (Dobra sciezka)", "SOLTYS_GOOD"), 
+           ("Zrobie to wylacznie dla zaplaty (Sciezka Najemnika)", "SOLTYS_GREED")]),
     House(550, 150, 140, 100, "Stara Zielarka", 
-          "Zielarka: Czuję od Ciebie zapach śmierci, miastowy.\nJeśli ruszysz na Mamunę,\nstrzeż się jej pieśni hipnotycznej.",
-          [("Weź amulet ochronny (-10 monet)", "AMULET"), ("Odejdź bez słowa", "LEAVE")])
+          "Zielarka: Czuje od Ciebie zapach smierci, miastowy.\nJesli ruszysz na Mamune,\nstrzez sie jej piesni hipnotycznej.",
+          [("Wez amulet ochronny (-10 monet)", "AMULET"), ("Odejdz bez slowa", "LEAVE")])
 ]
 
 # Pozycje potworów na mapie eksploracji
@@ -196,7 +196,7 @@ while running:
     keys = pygame.key.get_pressed()
 
     # ==========================================
-    # 1. OBSŁUGA LOGIKI
+    # 1. OBSŁUGA LOGIKI EKSPLORACJI I WNĘTRZ
     # ==========================================
     if current_state in [STATE_EXPLORE, STATE_HOUSE]:
         play_dynamic_music("EXPLORE")
@@ -210,6 +210,7 @@ while running:
             move_vector = move_vector.normalize() * 4
             player_pos += move_vector
 
+        # Logika na zewnętrznej mapie
         if current_state == STATE_EXPLORE:
             player_pos.x = max(20, min(WIDTH-20, player_pos.x))
             player_pos.y = max(20, min(HEIGHT-20, player_pos.y))
@@ -218,7 +219,9 @@ while running:
             for h in houses:
                 if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                     current_state = STATE_HOUSE
-                    player_pos = pygame.Vector2(h.rect.x + h.rect.width//2, h.rect.y + h.rect.height - 30)
+                    active_house = h
+                    # Przerzucamy gracza do "lokalnego układu współrzędnych" pokoju blisko dołu
+                    player_pos = pygame.Vector2(WIDTH // 2, HEIGHT - 130)
                     break
             
             # Startowanie walki
@@ -239,25 +242,32 @@ while running:
             
             # SPRAWDZENIE CZY WYGRALIŚMY GRĘ
             if all(m["beaten"] for m in monster_triggers):
-                end_message = "Pokonałeś wszystkie potwory! Wioska Choły jest znów bezpieczna."
+                end_message = "Pokonales wszystkie potwory! Wioska Choly jest znow bezpieczna."
                 if story_flags["zaufanie_wioski"] > 0:
-                    end_message += " Zostałeś bohaterem."
+                    end_message += " Zostales bohaterem."
                 current_state = STATE_END
 
+        # Logika wewnątrz domu
         elif current_state == STATE_HOUSE:
-            in_any_house = False
-            for h in houses:
-                if h.rect.inflate(40, 40).collidepoint(player_pos.x, player_pos.y):
-                    in_any_house = True
-                    if pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(h.rect.centerx, h.rect.centery)) < 40:
-                        current_state = STATE_DIALOGUE
-                        dialogue_title = h.name
-                        dialogue_lines = [h.npc_text]
-                        dialogue_choices = h.choices
-                        current_choice_idx = 0
-            if not in_any_house:
+            # Obliczenie odległości do stołu/NPC na środku pokoju
+            dist_to_npc = pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2))
+            
+            # Rozpoczęcie dialogu (NPC stoi twardo w jednym miejscu w lokalnym widoku)
+            if dist_to_npc < 60:
+                current_state = STATE_DIALOGUE
+                dialogue_title = active_house.name
+                dialogue_lines = [active_house.npc_text]
+                dialogue_choices = active_house.choices
+                current_choice_idx = 0
+            
+            # Wyjście z domu - jeśli gracz dotknie czarnej "ramki" poza domem
+            if player_pos.x < 50 or player_pos.x > WIDTH - 50 or player_pos.y < 50 or player_pos.y > HEIGHT - 50:
                 current_state = STATE_EXPLORE
+                # Kładziemy gracza bezpiecznie poniżej drzwi domu na mapie świata
+                player_pos = pygame.Vector2(active_house.door_rect.centerx, active_house.door_rect.bottom + 20)
+                active_house = None
 
+    # Logika walki i uników
     elif current_state == STATE_COMBAT:
         play_dynamic_music("BATTLE")
         combat_timer += 1
@@ -336,7 +346,7 @@ while running:
             combat_projectiles.clear()
             combat_bullets.clear()
         elif player_hp <= 0:
-            end_message = "Jerzy Drozd poległ w Chołach... Zostałeś pokonany."
+            end_message = "Jerzy Drozd polegl w Cholach... Zostales pokonany."
             current_state = STATE_END
 
     # ==========================================
@@ -347,7 +357,6 @@ while running:
             running = False
             
         elif event.type == pygame.KEYDOWN:
-            
             if current_state == STATE_DIALOGUE:
                 if event.key == pygame.K_w or event.key == pygame.K_UP:
                     current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
@@ -356,22 +365,22 @@ while running:
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_e:
                     choice_code = dialogue_choices[current_choice_idx][1]
                     
-                    # ZMIANA: Zamiast kończyć grę, gracz wraca do domu (i eksploracji) by walczyć
+                    # Poprawka: Odsunięcie gracza od NPC by rozmowa nie zapętlała się z automatu
                     if choice_code == "SOLTYS_GOOD": 
                         story_flags["zaufanie_wioski"] += 5
                         current_state = STATE_HOUSE
-                        player_pos.y += 50 
+                        player_pos.y += 70 
                     elif choice_code == "SOLTYS_GREED": 
                         story_flags["zaufanie_wioski"] -= 2
                         current_state = STATE_HOUSE
-                        player_pos.y += 50 
+                        player_pos.y += 70 
                     elif choice_code == "AMULET": 
                         player_hp = min(120, player_hp + 20)
                         current_state = STATE_HOUSE
-                        player_pos.y += 50 
+                        player_pos.y += 70 
                     elif choice_code == "LEAVE":
                         current_state = STATE_HOUSE
-                        player_pos.y += 50
+                        player_pos.y += 70
 
             elif current_state == STATE_END:
                 if event.key == pygame.K_ESCAPE:
@@ -385,9 +394,11 @@ while running:
                     player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
 
     # ==========================================
-    # 3. RENDEROWANIE
+    # 3. RENDEROWANIE Z NAPRAWIONYM TŁEM
     # ==========================================
-    if current_state in [STATE_EXPLORE, STATE_DIALOGUE, STATE_DICE_ROLL]:
+    
+    # 3A. Rysowanie Mapy Świata (Eksploracja i Rzut Kośćmi)
+    if current_state in [STATE_EXPLORE, STATE_DICE_ROLL]:
         screen.blit(terrain_surface, (0, 0))
         for h in houses:
             draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height)
@@ -400,18 +411,51 @@ while running:
                 elif m["type"] == BOSS_KRZYKACZ: draw_monster_krzykacz(screen, m["rect"].x, m["rect"].y, anim_tick)
 
         draw_drozd(screen, int(player_pos.x) - 15, int(player_pos.y) - 20)
+        
+        # Ekran rzutu na tym samym tle
+        if current_state == STATE_DICE_ROLL:
+            pygame.draw.rect(screen, (10, 10, 15), (150, 180, WIDTH-300, 350))
+            pygame.draw.rect(screen, (220, 50, 50), (150, 180, WIDTH-300, 350), 3)
+            title = font_main.render(f"ZASADZKA! PRZECIWNIK: {active_boss_type}", True, (255, 50, 50))
+            screen.blit(title, (WIDTH//2 - title.get_width()//2, 210))
+            p_str = f"Twoj rzut koscmi: Mod. Ataku ({mod_attack: +d}), Mod. Wytrzymalosci ({mod_stamina: +d})"
+            m_str = f"Rzut wroga: Mod. Ataku ({boss_mod_attack: +d}), Mod. Wytrzymalosci ({boss_mod_stamina: +d})"
+            screen.blit(font_main.render(p_str, True, (100, 255, 100)), (200, 290))
+            screen.blit(font_main.render(m_str, True, (255, 100, 100)), (200, 350))
+            prompt = font_main.render("NACISNIJ [ENTER], ABY ROZPOCZAC MINIGIERE WALKI", True, (255, 255, 255))
+            screen.blit(prompt, (WIDTH//2 - prompt.get_width()//2, 450))
 
-    elif current_state == STATE_HOUSE:
+    # 3B. Rysowanie Wnętrz Budynków (Dom i Dialog ZAWSZE na tle pokoju)
+    elif current_state in [STATE_HOUSE, STATE_DIALOGUE]:
         screen.fill((25, 20, 15)) 
         pygame.draw.rect(screen, (45, 35, 25), (50, 50, WIDTH-100, HEIGHT-100), 8) 
         pygame.draw.rect(screen, (70, 50, 35), (WIDTH//2 - 40, HEIGHT//2 - 20, 80, 50))
         pygame.draw.circle(screen, (200, 150, 120), (WIDTH//2, HEIGHT//2 - 60), 10)
         pygame.draw.rect(screen, (60, 90, 70), (WIDTH//2 - 12, HEIGHT//2 - 50, 24, 25))
+        
         draw_drozd(screen, int(player_pos.x) - 15, int(player_pos.y) - 20)
         
-        lbl = font_sub.render("Podejdź do mieszkańca, by rozmawiać. Wyjdź poza ramę, by opuścić dom.", True, (150, 150, 150))
-        screen.blit(lbl, (70, HEIGHT - 40))
+        if current_state == STATE_HOUSE:
+            lbl = font_sub.render("Podejdz do mieszkanca, by rozmawiac. Wyjdz poza rame, by opuscic dom.", True, (150, 150, 150))
+            screen.blit(lbl, (70, HEIGHT - 40))
+            
+        elif current_state == STATE_DIALOGUE:
+            pygame.draw.rect(screen, (15, 12, 10), (50, 450, WIDTH-100, 220))
+            pygame.draw.rect(screen, (180, 140, 90), (50, 450, WIDTH-100, 220), 4)
+            t_surf = font_main.render(dialogue_title, True, (255, 215, 0))
+            screen.blit(t_surf, (80, 465))
+            lines = dialogue_lines[0].split('\n')
+            for idx, l in enumerate(lines):
+                l_surf = font_sub.render(l, True, (230, 220, 210))
+                screen.blit(l_surf, (80, 500 + idx*22))
+            for idx, choice in enumerate(dialogue_choices):
+                color = (255, 255, 100) if idx == current_choice_idx else (140, 140, 140)
+                prefix = " > " if idx == current_choice_idx else "   "
+                c_surf = font_sub.render(prefix + choice[0], True, color)
+                screen.blit(c_surf, (80, 580 + idx * 25))
+            screen.blit(font_sub.render("[W/S] Wybor  [ENTER] Potwierdz", True, (100, 100, 100)), (80, 640))
 
+    # 3C. Rysowanie Areny Walki
     elif current_state == STATE_COMBAT:
         screen.fill((10, 12, 18))
         pygame.draw.rect(screen, (150, 30, 30), (80, 100, WIDTH-160, HEIGHT-160), 3) 
@@ -436,48 +480,11 @@ while running:
         draw_drozd(screen, int(player_combat_pos.x) - 15, int(player_combat_pos.y) - 20)
         
         if active_boss_type == BOSS_KRZYKACZ:
-            screen.blit(font_sub.render("[SPACJA] - Strzał z Kuszy  [STRZAŁKI] - Uniki", True, (200, 200, 255)), (WIDTH//2 - 150, HEIGHT - 45))
+            screen.blit(font_sub.render("[SPACJA] - Strzal z Kuszy  [STRZALKI] - Uniki", True, (200, 200, 255)), (WIDTH//2 - 150, HEIGHT - 45))
         else:
-            screen.blit(font_sub.render("[STRZAŁKI] - Unikaj ataków i przetrwaj, by zadać ciosy!", True, (255, 200, 200)), (WIDTH//2 - 180, HEIGHT - 45))
+            screen.blit(font_sub.render("[STRZALKI] - Unikaj atakow i przetrwaj, by zadac ciosy!", True, (255, 200, 200)), (WIDTH//2 - 180, HEIGHT - 45))
 
-    elif current_state == STATE_DIALOGUE:
-        pygame.draw.rect(screen, (15, 12, 10), (50, 450, WIDTH-100, 220))
-        pygame.draw.rect(screen, (180, 140, 90), (50, 450, WIDTH-100, 220), 4)
-        
-        t_surf = font_main.render(dialogue_title, True, (255, 215, 0))
-        screen.blit(t_surf, (80, 465))
-        
-        # POPRAWKA 1: Generowanie tekstu NPC ze złamaniem wierszy 
-        lines = dialogue_lines[0].split('\n')
-        for idx, l in enumerate(lines):
-            l_surf = font_sub.render(l, True, (230, 220, 210))
-            screen.blit(l_surf, (80, 500 + idx*22))
-            
-        # POPRAWKA 2: Przeniesienie opcji wyboru POD główny tekst (zamiast obok)
-        for idx, choice in enumerate(dialogue_choices):
-            color = (255, 255, 100) if idx == current_choice_idx else (140, 140, 140)
-            prefix = " > " if idx == current_choice_idx else "   "
-            c_surf = font_sub.render(prefix + choice[0], True, color)
-            screen.blit(c_surf, (80, 580 + idx * 25))
-            
-        screen.blit(font_sub.render("[W/S] Wybór  [ENTER] Potwierdź", True, (100, 100, 100)), (80, 640))
-
-    elif current_state == STATE_DICE_ROLL:
-        pygame.draw.rect(screen, (10, 10, 15), (150, 180, WIDTH-300, 350))
-        pygame.draw.rect(screen, (220, 50, 50), (150, 180, WIDTH-300, 350), 3)
-        
-        title = font_main.render(f"ZASADZKA! PRZECIWNIK: {active_boss_type}", True, (255, 50, 50))
-        screen.blit(title, (WIDTH//2 - title.get_width()//2, 210))
-        
-        p_str = f"Twój rzut kośćmi: Mod. Ataku ({mod_attack: +d}), Mod. Wytrzymałości ({mod_stamina: +d})"
-        m_str = f"Rzut wroga: Mod. Ataku ({boss_mod_attack: +d}), Mod. Wytrzymałości ({boss_mod_stamina: +d})"
-        
-        screen.blit(font_main.render(p_str, True, (100, 255, 100)), (200, 290))
-        screen.blit(font_main.render(m_str, True, (255, 100, 100)), (200, 350))
-        
-        prompt = font_main.render("NACIŚNIJ [ENTER], ABY ROZPOCZĄĆ MINIGIERĘ WALKI", True, (255, 255, 255))
-        screen.blit(prompt, (WIDTH//2 - prompt.get_width()//2, 450))
-    
+    # 3D. Ekran Zakończenia
     elif current_state == STATE_END:
         screen.fill((15, 10, 10))
         
@@ -487,7 +494,7 @@ while running:
         msg_surf = font_sub.render(end_message, True, (220, 220, 200))
         screen.blit(msg_surf, (WIDTH//2 - msg_surf.get_width()//2, HEIGHT//2))
         
-        exit_surf = font_sub.render("[Naciśnij ESC aby zamknąć grę]", True, (100, 100, 100))
+        exit_surf = font_sub.render("[Nacisnij ESC aby zamknac gre]", True, (100, 100, 100))
         screen.blit(exit_surf, (WIDTH//2 - exit_surf.get_width()//2, HEIGHT - 50))
 
     pygame.display.flip()
