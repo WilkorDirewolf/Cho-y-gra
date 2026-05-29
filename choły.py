@@ -30,9 +30,10 @@ end_message = ""
 # --- TYPY WALKI ---
 BOSS_MAMUNA = "MAMUNA (Pani Lasu)"
 BOSS_LATARNIK = "LATARNIK (Zwodzący Cień)"
-BOSS_PIEN = "PIEN (Zgniły Strażnik)"
+BOSS_PIEN = "PIEŃ (Zgniły Strażnik)"
+BOSS_GAWRON = "GAWRON (Czarny Anioł)"
+BOSS_SKRZEKACZ = "SKRZEKACZ (Demon)"
 BOSS_KRZYKACZ_FOREST = "MŁODY KRZYKACZ"
-BOSS_TLUM = "TŁUM WIEŚNIAKÓW"
 BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
 # --- PROCEDURALNY SILNIK GRAFICZNY ---
@@ -85,11 +86,27 @@ def draw_monster_latarnik(surface, x, y, anim_tick):
     pygame.draw.circle(surface, (210, 210, 190), (x + 15, y + offset_y), 8)
     pygame.draw.circle(surface, (150, 0, 0), (x + 12, y - 1 + offset_y), 2)
     pygame.draw.circle(surface, (150, 0, 0), (x + 18, y - 1 + offset_y), 2)
+    # Latarnia
+    pygame.draw.rect(surface, (200, 150, 50), (x + 30, y + 30 + offset_y, 10, 15))
+    pygame.draw.circle(surface, (255, 255, 100), (x + 35, y + 37 + offset_y), 5)
 
 def draw_monster_pien(surface, x, y):
     pygame.draw.rect(surface, (45, 35, 30), (x, y, 40, 50))
     pygame.draw.line(surface, (180, 20, 20), (x + 10, y + 15), (x + 30, y + 25), 3)
     pygame.draw.circle(surface, (180, 255, 100), (x + 20, y + 20), 3)
+    
+def draw_monster_gawron(surface, x, y):
+    pygame.draw.ellipse(surface, (15, 15, 20), (x, y, 40, 60))
+    pygame.draw.polygon(surface, (25, 25, 30), [(x, y+20), (x-30, y-20), (x+15, y+30)])
+    pygame.draw.circle(surface, (30, 30, 35), (x+20, y-10), 12)
+    pygame.draw.polygon(surface, (150, 150, 150), [(x+25, y-10), (x+45, y-5), (x+25, y+2)])
+
+def draw_monster_skrzekacz(surface, x, y):
+    pygame.draw.rect(surface, (40, 60, 30), (x, y, 40, 35), border_radius=8)
+    pygame.draw.circle(surface, (255, 255, 50), (x+10, y+15), 5)
+    pygame.draw.circle(surface, (255, 255, 50), (x+30, y+15), 5)
+    pygame.draw.circle(surface, (0, 0, 0), (x+10, y+15), 2)
+    pygame.draw.circle(surface, (0, 0, 0), (x+30, y+15), 2)
 
 def draw_monster_mamuna(surface, x, y, anim_tick):
     offset_x = int(math.sin(anim_tick * 0.08) * 3)
@@ -100,31 +117,18 @@ def draw_monster_mamuna(surface, x, y, anim_tick):
 def draw_true_krzykacz(surface, x, y, anim_tick):
     scale = 1.2 + math.sin(anim_tick * 0.1) * 0.05
     w, h = int(50 * scale), int(90 * scale)
-    # Ciało (wilk dwunożny)
     pygame.draw.ellipse(surface, (40, 35, 45), (x - w//2 + 10, y - h//2 + 20, w, h))
-    pygame.draw.polygon(surface, (30, 25, 35), [(x, y), (x-40, y-20), (x, y-40)]) # Łapa
-    pygame.draw.polygon(surface, (30, 25, 35), [(x+20, y), (x+60, y-20), (x+20, y-40)]) # Łapa
-    # Pazury
+    pygame.draw.polygon(surface, (30, 25, 35), [(x, y), (x-40, y-20), (x, y-40)])
+    pygame.draw.polygon(surface, (30, 25, 35), [(x+20, y), (x+60, y-20), (x+20, y-40)])
     pygame.draw.line(surface, (200, 0, 0), (x-40, y-20), (x-55, y-10), 3)
     pygame.draw.line(surface, (200, 0, 0), (x+60, y-20), (x+75, y-10), 3)
-    # Czaszka Jelenia
     pygame.draw.polygon(surface, (220, 220, 200), [(x-15, y-h//2), (x+35, y-h//2), (x+10, y-h//2+30)])
     pygame.draw.circle(surface, (20, 0, 0), (x-2, y-h//2+10), 5)
     pygame.draw.circle(surface, (20, 0, 0), (x+22, y-h//2+10), 5)
-    # Poroże
     pygame.draw.line(surface, (150, 140, 120), (x-5, y-h//2), (x-30, y-h//2-40), 4)
     pygame.draw.line(surface, (150, 140, 120), (x+25, y-h//2), (x+50, y-h//2-40), 4)
     pygame.draw.line(surface, (150, 140, 120), (x-20, y-h//2-20), (x-35, y-h//2-10), 3)
     pygame.draw.line(surface, (150, 140, 120), (x+40, y-h//2-20), (x+55, y-h//2-10), 3)
-
-def draw_mob(surface, x, y, anim_tick):
-    for i in range(3):
-        offset_y = int(math.sin(anim_tick * 0.1 + i) * 5)
-        px, py = x - 30 + i*35, y + offset_y
-        pygame.draw.rect(surface, (70, 40, 30), (px, py, 20, 30))
-        pygame.draw.circle(surface, (200, 150, 120), (px + 10, py - 5), 8)
-        pygame.draw.line(surface, (60, 30, 10), (px + 15, py + 10), (px + 25, py - 10), 3)
-        pygame.draw.circle(surface, (255, 100, 0), (px + 25, py - 12), 5)
 
 def draw_lesny_dziadek(surface, x, y):
     pygame.draw.rect(surface, (30, 50, 30), (x - 15, y - 40, 30, 80)) 
@@ -182,7 +186,13 @@ clues_found = {
     "mamuna_rozmowa": False,
     "z_lusia": False,
     "spotkal_dziadka": False,
-    "zardzewialy_sztylet": False
+    "zardzewialy_sztylet": False,
+    "ma_amulet_zielarki": False,
+    "wspolpraca_z_lusia": False,
+    "rozmowa_pien": False,
+    "rozmowa_gawron": False,
+    "rozmowa_skrzekacz": False,
+    "rozmowa_latarnik": False
 }
 
 def get_kapliczka_dialogue():
@@ -195,7 +205,7 @@ def get_soltys_dialogue():
     return ("Sołtys: Czego tu szukasz? Wilki zjadły małego, to wielka tragedia.", [("Wrócę później.", "LEAVE")])
 
 def get_zielarka_dialogue():
-    if clues_found["zaufanie_zielarki"]: return ("Zielarka: Przeszukaj piec w spalonej chacie.", [("Odejdź", "LEAVE")])
+    if clues_found["zaufanie_zielarki"]: return ("Zielarka: Użyj tego Amuletu przeciw demonom... [ZDOBYTO AMULET]", [("Odejdź", "CLUE_AMULET")])
     if clues_found["zaufanie_soltysa"]:
         return ("Zielarka: Bieniasz cię przysłał? Zapłać 5 zł, a wskażę ci ruinę.", 
                 [("Zapłać za wskazówkę (5 zł)", "PAY_ZIELARKA"), ("Odejdź", "LEAVE")])
@@ -231,11 +241,14 @@ houses = [
 decorations_trees = [(40, 260), (50, 500), (360, 180), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
 forest_trees = [(random.randint(-10, WIDTH-20), random.randint(-10, HEIGHT-20)) for _ in range(80)]
 
+# Przerobione rozmieszczenie NPC w lesie
 monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ_FOREST, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_MAMUNA, "beaten": False}
+    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_MAMUNA, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 - 50, HEIGHT//2 - 250, 60, 60), "type": BOSS_GAWRON, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 - 50, HEIGHT//2 + 200, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False}
 ]
 
 # Zmienne ogólne
@@ -250,6 +263,11 @@ base_attack, mod_attack, mod_stamina = 10, 0, 0
 active_boss_type = None
 boss_hp, boss_max_hp = 100, 100
 boss_mod_attack, boss_mod_stamina = 0, 0
+
+# Parametry mechaniki Latarnika
+latarnik_fatigue = 0
+latarnik_max_fatigue = 40
+latarnik_pos = pygame.Vector2(WIDTH//2, 200)
 
 dialogue_title, dialogue_lines, dialogue_choices = "", [], []
 current_choice_idx = 0
@@ -319,22 +337,54 @@ while running:
                 for m in monster_triggers_forest:
                     if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
                         active_boss_type = m["type"]
+                        
+                        # Przechwytywanie dialogów demonów
                         if active_boss_type == BOSS_MAMUNA and not clues_found["mamuna_rozmowa"]:
                             current_state = STATE_DIALOGUE
                             dialogue_title = "Leże Mamuny - Konfrontacja"
-                            dialogue_lines = [
-                                "Mamuna gładzi ludzkie niemowlę...",
-                                "Zostaw nas w spokoju, a las nie skrzywdzi was więcej."
-                            ]
-                            dialogue_choices = [
-                                ("Oddaj dziecko i giń z moich rąk!", "FIGHT_MAMUNA"),
-                                ("Opuść broń. (Zostaw dziecko Mamunie)", "SPARE_MAMUNA")
-                            ]
+                            dialogue_lines = ["Mamuna gładzi ludzkie niemowlę...", "Zostaw nas w spokoju, a las nie skrzywdzi was więcej."]
+                            dialogue_choices = [("Oddaj dziecko i giń z moich rąk!", "FIGHT_MAMUNA"), ("Opuść broń. (Zostaw dziecko Mamunie)", "SPARE_MAMUNA")]
                             current_choice_idx = 0
                             clues_found["mamuna_rozmowa"] = True
                             player_pos.y += 20 
                             break
-                        else:
+                        elif active_boss_type == BOSS_LATARNIK and not clues_found["rozmowa_latarnik"]:
+                            current_state = STATE_DIALOGUE
+                            dialogue_title = "Spotkanie z Latarnikiem"
+                            dialogue_lines = ["Latarnik drży zawieszony w powietrzu. Trzyma żarzącą się latarnię z głowy chochlika."]
+                            dialogue_choices = [("Zaatakuj Latarnika", "START_LATARNIK_FIGHT")]
+                            if clues_found["ma_amulet_zielarki"]:
+                                dialogue_choices.insert(0, ("Podaj mu amulet od Zielarki (Osłabi to jego ataki)", "GIVE_AMULET"))
+                            current_choice_idx = 0
+                            clues_found["rozmowa_latarnik"] = True
+                            player_pos.y += 20
+                            break
+                        elif active_boss_type == BOSS_PIEN and not clues_found["rozmowa_pien"]:
+                            current_state = STATE_DIALOGUE
+                            dialogue_title = "Spotkanie z Pniem"
+                            dialogue_lines = ["Demon Pień o aparycji tłustego prosiaka z głową łosia chrumka groźnie."]
+                            dialogue_choices = [("Pytaj o Latarnika", "INFO_LATARNIK"), ("Zdradź się jako demon łowca (Walka)", "START_GENERIC_FIGHT")]
+                            current_choice_idx = 0
+                            player_pos.y += 20
+                            break
+                        elif active_boss_type == BOSS_GAWRON and not clues_found["rozmowa_gawron"]:
+                            current_state = STATE_DIALOGUE
+                            dialogue_title = "Spotkanie z Gawronem"
+                            dialogue_lines = ["Gawron - anioł z głową czarnego ptaka, przygląda ci się podejrzliwie."]
+                            dialogue_choices = [("Gdzie leży legowisko Krzykacza?", "INFO_KRZYKACZ_LAIR"), ("Zdradź się (Walka)", "START_GENERIC_FIGHT")]
+                            current_choice_idx = 0
+                            player_pos.y += 20
+                            break
+                        elif active_boss_type == BOSS_SKRZEKACZ and not clues_found["rozmowa_skrzekacz"]:
+                            current_state = STATE_DIALOGUE
+                            dialogue_title = "Spotkanie ze Skrzekaczem"
+                            dialogue_lines = ["Zza liści wyłania się Skrzekacz, cichy demon bagienny."]
+                            dialogue_choices = [("Pytaj o Lusię", "INFO_LUSIA"), ("Zdradź się (Walka)", "START_GENERIC_FIGHT")]
+                            current_choice_idx = 0
+                            player_pos.y += 20
+                            break
+                        elif m["beaten"] == False and active_boss_type not in [BOSS_LATARNIK, BOSS_PIEN, BOSS_GAWRON, BOSS_SKRZEKACZ, BOSS_MAMUNA]:
+                            # Inne bezpośrednie walki
                             current_state = STATE_DICE_ROLL
                             boss_hp = boss_max_hp = 100
                             break
@@ -368,22 +418,37 @@ while running:
         player_combat_pos.x = max(100, min(WIDTH-100, player_combat_pos.x))
         player_combat_pos.y = max(150, min(HEIGHT-50, player_combat_pos.y))
         
-        # Atak Bossa
-        fire_rate = 40 if active_boss_type != BOSS_TRUE_KRZYKACZ else 25
-        if combat_timer % fire_rate == 0:
-            dx, dy = player_combat_pos.x - (WIDTH//2), player_combat_pos.y - 220
-            dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
-            spd = 6 if active_boss_type != BOSS_TRUE_KRZYKACZ else 9
-            color = (255, 60, 0) if active_boss_type != BOSS_TRUE_KRZYKACZ else (100, 0, 0)
-            combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*spd, (dy/dist)*spd, color, 10))
+        # LOGIKA LATARNIKA (zależna od zmęczenia i wyborów)
+        if active_boss_type == BOSS_LATARNIK:
+            speed_multiplier = max(0.2, 1.0 - (latarnik_fatigue / latarnik_max_fatigue))
+            latarnik_pos.x += math.sin(combat_timer * 0.1) * 15 * speed_multiplier
+            latarnik_pos.y += math.cos(combat_timer * 0.15) * 10 * speed_multiplier
+            latarnik_pos.x = max(100, min(WIDTH-100, latarnik_pos.x))
+            latarnik_pos.y = max(50, min(HEIGHT//2, latarnik_pos.y))
             
+            if combat_timer % max(10, int(35 * speed_multiplier)) == 0:
+                dx, dy = player_combat_pos.x - latarnik_pos.x, player_combat_pos.y - latarnik_pos.y
+                dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
+                combat_projectiles.append(Projectile(latarnik_pos.x, latarnik_pos.y, (dx/dist)*8, (dy/dist)*8, (0, 255, 255), 8))
+        else:
+            # Atak standardowych Bossów
+            fire_rate = 40 if active_boss_type != BOSS_TRUE_KRZYKACZ else 25
+            if combat_timer % fire_rate == 0:
+                dx, dy = player_combat_pos.x - (WIDTH//2), player_combat_pos.y - 220
+                dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
+                spd = 6 if active_boss_type != BOSS_TRUE_KRZYKACZ else 9
+                color = (255, 60, 0) if active_boss_type != BOSS_TRUE_KRZYKACZ else (100, 0, 0)
+                combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*spd, (dy/dist)*spd, color, 10))
+            
+        # Strzelanie gracza
         if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
-            combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -8, (255, 255, 255), 4))
+            combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -10, (255, 255, 255), 4))
 
         for b in combat_bullets:
             b.update()
-            if pygame.Vector2(b.x, b.y).distance_to(pygame.Vector2(WIDTH//2, 220)) < 45:
-                boss_hp -= 10
+            target_pos = latarnik_pos if active_boss_type == BOSS_LATARNIK else pygame.Vector2(WIDTH//2, 220)
+            if pygame.Vector2(b.x, b.y).distance_to(target_pos) < 45:
+                boss_hp -= max(1, 10 + mod_attack)
                 combat_bullets.remove(b)
             elif b.y < 100: combat_bullets.remove(b)
 
@@ -394,7 +459,11 @@ while running:
                 if active_boss_type == BOSS_TRUE_KRZYKACZ: dmg = 15
                 player_hp -= dmg
                 combat_projectiles.remove(p)
-            elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT: combat_projectiles.remove(p)
+            elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT:
+                # MECHANIKA ZMĘCZENIA - Każdy udany unik gracza przeciwko Latarnikowi
+                if active_boss_type == BOSS_LATARNIK and latarnik_fatigue < latarnik_max_fatigue:
+                    latarnik_fatigue += 1
+                combat_projectiles.remove(p)
 
         # INSTA-KILL KRZYKACZA
         if active_boss_type == BOSS_TRUE_KRZYKACZ and player_hp < player_max_hp / 3:
@@ -420,7 +489,6 @@ while running:
     elif current_state == STATE_RUNNER:
         runner_timer += 1
         
-        # Grawitacja i skok
         runner_player_vy += 1 
         runner_player_y += runner_player_vy
         if runner_player_y >= runner_ground_y:
@@ -431,31 +499,25 @@ while running:
             runner_player_vy = -16
             runner_is_jumping = True
 
-        # Generowanie przeszkód
         if random.randint(1, 60) == 1:
             o_type = "LOG"
             if runner_mode_vines and random.choice([True, False]): o_type = "VINE"
             runner_obstacles.append(RunnerObstacle(WIDTH + 50, runner_ground_y + 10, 30, 40, o_type, 7))
 
-        # Update przeszkód
         for o in runner_obstacles[:]:
             o.update()
-            # Kolizja gracza z przeszkodą
             if o.rect.colliderect(pygame.Rect(400, runner_player_y, 30, 40)):
                 player_hp -= 15
                 runner_obstacles.remove(o)
             elif o.rect.right < 0:
                 runner_obstacles.remove(o)
 
-        # Update bełtów z kuszy
         for b in runner_bolts[:]:
             b.x -= 10
-            # Kolizja z Dziadkiem (Dziadek stoi na ok. x=100)
             if b.x < 150:
                 runner_dziadek_hp -= 10
                 runner_bolts.remove(b)
 
-        # Warunki wygranej/przegranej
         if runner_dziadek_hp <= 0:
             end_message = "Zgubiłeś Dziadka i zgładziłeś go z kuszy!\nUratowałeś drwali z urzędu. Lecz twój konflikt z Lasem dopiero się zaczął..."
             current_state = STATE_END
@@ -496,6 +558,10 @@ while running:
                     
                     if c_code == "CLUE_TOTEM": clues_found["znaleziono_totem"] = True
                     elif c_code == "CLUE_DAGGER": clues_found["zardzewialy_sztylet"] = True
+                    elif c_code == "CLUE_AMULET": 
+                        clues_found["ma_amulet_zielarki"] = True
+                        current_state = STATE_EXPLORE
+                        continue
                     elif c_code and c_code.startswith("PAY_"):
                         if player_money >= 5:
                             player_money -= 5
@@ -518,6 +584,77 @@ while running:
                         current_state = STATE_TRANSITION
                         continue
                     
+                    # LOGIKA NPC W LESIE
+                    elif c_code == "INFO_LATARNIK":
+                        dialogue_title = "Wiedza Demona Pnia"
+                        dialogue_lines = ["Pień: Na tym piętrze lasu ukrywa się Latarnik.", "Jego latarnia z głowy chochlika wybudzi samego Krzykacza!"]
+                        dialogue_choices = [("Zrozumiałem.", "CROSS_DECISION")]
+                        current_choice_idx = 0
+                        clues_found["rozmowa_pien"] = True
+                        continue
+                    elif c_code == "INFO_KRZYKACZ_LAIR":
+                        dialogue_title = "Wiedza Gawrona"
+                        dialogue_lines = ["Gawron: Ostateczne leże Krzykacza znajduje się tuż obok...", "Śpij, jeśli nie chcesz zginąć z jego pazurów."]
+                        dialogue_choices = [("Zrozumiałem.", "CROSS_DECISION")]
+                        current_choice_idx = 0
+                        clues_found["rozmowa_gawron"] = True
+                        continue
+                    elif c_code == "INFO_LUSIA":
+                        dialogue_title = "Tajemnica Lusi"
+                        dialogue_lines = ["Skrzekacz: Lusia to patron tego lasu! Jeśli będzie miała ochotę,", "może zrównać Choły z ziemią na pstryknięcie palcem."]
+                        dialogue_choices = [("To zmienia postać rzeczy.", "CROSS_DECISION")]
+                        current_choice_idx = 0
+                        clues_found["rozmowa_skrzekacz"] = True
+                        continue
+                    elif c_code == "CROSS_DECISION":
+                        dialogue_title = "Rozwidlenie Ścieżek"
+                        dialogue_lines = ["Wybierz mądrze co dalej."]
+                        dialogue_choices = [("Wróc do eksploracji", "LEAVE")]
+                        if clues_found["rozmowa_pien"]: dialogue_choices.append(("Idź zniszczyć Latarnika", "START_LATARNIK_FIGHT"))
+                        if clues_found["rozmowa_gawron"]: dialogue_choices.append(("Idź do leża Krzykacza", "START_KRZYKACZ_FIGHT"))
+                        if clues_found["rozmowa_skrzekacz"]: dialogue_choices.append(("Próbuj zwerbować Lusię (Teleport)", "RECRUIT_LUSIA"))
+                        current_choice_idx = 0
+                        continue
+
+                    # ZWERBOWANIE LUSI
+                    elif c_code == "RECRUIT_LUSIA":
+                        clues_found["wspolpraca_z_lusia"] = True
+                        dialogue_title = "Pomoc Patronki"
+                        dialogue_lines = ["Lusia decyduje się pomóc. Teleportuje cię od razu do leża Latarnika!"]
+                        dialogue_choices = [("Zawalcz z nim (Masz wsparcie!)", "START_LATARNIK_FIGHT")]
+                        current_choice_idx = 0
+                        continue
+
+                    # WALKI Z NPC
+                    elif c_code == "START_GENERIC_FIGHT":
+                        current_state = STATE_COMBAT
+                        boss_hp = boss_max_hp = 150
+                        boss_mod_attack = 0
+                        combat_timer = 0
+                        combat_projectiles.clear()
+                        continue
+                    
+                    elif c_code == "GIVE_AMULET":
+                        dialogue_title = "Osłabienie Latarnika"
+                        dialogue_lines = ["Rzucasz mu amulet Zielarki. Jego światło przygasa! (Atak osłabiony)"]
+                        dialogue_choices = [("Zakończ to!", "START_LATARNIK_FIGHT_AMULET")]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code.startswith("START_LATARNIK_FIGHT"):
+                        current_state = STATE_COMBAT
+                        active_boss_type = BOSS_LATARNIK
+                        latarnik_fatigue = 0
+                        boss_hp = boss_max_hp = 200
+                        
+                        # Obliczanie kar i bonusów
+                        boss_mod_attack = -2 if clues_found["ma_amulet_zielarki"] else 2
+                        mod_attack = 0 if clues_found["wspolpraca_z_lusia"] else -2
+
+                        combat_timer = 0
+                        combat_projectiles.clear()
+                        continue
+
                     # LOGIKA JĄDRA LASU (Wywód Drzewa, Drwale i Krzykacz)
                     elif c_code == "TALK_TO_TREE":
                         dialogue_title = "Rozmowa z Duchem Lasu"
@@ -683,7 +820,17 @@ while running:
         pygame.draw.rect(screen, (0, 0, 50), (20, HEIGHT - 40, 200, 20))
         pygame.draw.rect(screen, (0, 100, 255), (20, HEIGHT - 40, 200 * (player_hp / player_max_hp), 20))
         
-        if active_boss_type == BOSS_TRUE_KRZYKACZ: draw_true_krzykacz(screen, WIDTH//2, 220, anim_tick)
+        # Wyrysowanie specyficznego bossa
+        if active_boss_type == BOSS_TRUE_KRZYKACZ: 
+            draw_true_krzykacz(screen, WIDTH//2, 220, anim_tick)
+        elif active_boss_type == BOSS_LATARNIK:
+            draw_monster_latarnik(screen, int(latarnik_pos.x - 15), int(latarnik_pos.y), anim_tick)
+        elif active_boss_type == BOSS_PIEN:
+            draw_monster_pien(screen, WIDTH//2 - 20, 200)
+        elif active_boss_type == BOSS_GAWRON:
+            draw_monster_gawron(screen, WIDTH//2 - 15, 200)
+        elif active_boss_type == BOSS_SKRZEKACZ:
+            draw_monster_skrzekacz(screen, WIDTH//2 - 20, 200)
 
         draw_drozd(screen, int(player_combat_pos.x), int(player_combat_pos.y))
         for p in combat_projectiles: p.draw(screen)
