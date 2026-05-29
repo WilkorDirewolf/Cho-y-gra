@@ -137,7 +137,7 @@ RIDDLES = [
     {"q": "Traci głowę o poranku, odzyskuje ją dopiero wieczorem.", "a": ["Poduszka", "Kogut", "Słońce"], "c": 0},
     {"q": "Ma pióra, a nie lata. Ma grzbiet, a nie chodzi.", "a": ["Książka", "Gawron", "Strzała"], "c": 0},
     {"q": "Co ma jedno oko, ale absolutnie nic nie widzi?", "a": ["Igła", "Cyklop", "Burza"], "c": 0},
-    {"q": "Można mnie łatwo złapać, ale niezwykle trudno rzucić.", "a": ["Przeziębienie", "Kamień", "Uciekinier"], "c": 0},
+    {"q": "Można mnie łatwo złapać, ale niezwykle trudno rzucić.", "a": ["Przeziemienie", "Kamień", "Uciekinier"], "c": 0},
     {"q": "Co pożera wszystko: ptaki, drzewa, kamień i stal, a na końcu sam las?", "a": ["Czas", "Ogień", "Krzykacz"], "c": 0},
     {"q": "Stoisz przed nią, widzi cię idealnie, ale nigdy nie odezwie się pierwsza.", "a": ["Lustro", "Ściana", "Lusia"], "c": 0},
     {"q": "Czym jest to, co ukrywasz, a gdy komuś dasz, natychmiast tracisz?", "a": ["Sekret", "Słowo", "Moneta"], "c": 0},
@@ -358,7 +358,7 @@ while running:
             draw_wrapped_text(screen, "SUKCES! Krzyczysz pod maską jelenia, że Krzykacz pożre wszystkich, niezależnie od ofiar. Pień zaczyna drżeć i wypuszcza cię. \n\nW tej samej sekundzie z mroku wyskakuje gigantyczny KRZYKACZ! Atakuje wieś!", (440, 60), 410)
             if draw_btn(btn1, "Ostateczna obrona Chołów"):
                 game.state = "MINIGAME_KRZYKACZ"
-                game.timer = pygame.get_ticks()
+                game.timer = pygame.time.get_ticks()  # <--- POPRAWIONE: dodano .time
                 game.boss_hp = 15
         else:
             game.state = "PIEN_BOSS_FIGHT"
@@ -367,19 +367,19 @@ while running:
         draw_wrapped_text(screen, "Pień nie słucha! Atakujesz jego świńskie cielsko. Musisz szybko uderzać!", (440, 60), 410)
         if draw_btn(btn1, "Zasztyletuj bestię!"):
             game.state = "MINIGAME_KRZYKACZ"
-            game.timer = pygame.get_ticks()
+            game.timer = pygame.time.get_ticks()  # <--- POPRAWIONE: dodano .time
             game.boss_hp = 15
 
     # --- MINIGRA FINALNA: SURVIVAL PRZECIWMKO KRZYKACZOWI ---
     elif game.state == "MINIGAME_KRZYKACZ":
         pygame.draw.rect(screen, PALETTE[3], (50, 50, 800, 500))
-        time_left = 60 - (pygame.get_ticks() - game.timer) // 1000
+        time_left = 60 - (pygame.time.get_ticks() - game.timer) // 1000  # <--- POPRAWIONE: dodano .time
         
         if time_left <= 0 or game.boss_hp <= 0:
             game.state = "VICTORY"
             
         # Losowa zmiana pozycji Krzykacza na ekranie co sekundę
-        if pygame.get_ticks() % 30 == 0:
+        if pygame.time.get_ticks() % 30 == 0:  # <--- POPRAWIONE: dodano .time
             game.arcade_pos = [random.randint(100, 700), random.randint(100, 400)]
             
         pygame.draw.circle(screen, PALETTE[4], game.arcade_pos, 40) # Cel-Krzykacz
