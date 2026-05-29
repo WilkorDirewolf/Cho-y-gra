@@ -260,7 +260,8 @@ while running:
             for h in houses:
                 if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                     current_state = STATE_HOUSE
-                    player_pos = pygame.Vector2(h.rect.x + h.width//2, h.rect.y + h.height - 30)
+                    # Dodano ".rect" przed width i height
+                    player_pos = pygame.Vector2(h.rect.x + h.rect.width//2, h.rect.y + h.rect.height - 30)
                     break
             
             # Wyzwalanie walki z potworami
