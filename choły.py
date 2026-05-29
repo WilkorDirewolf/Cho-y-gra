@@ -21,17 +21,19 @@ STATE_DIALOGUE = "DIALOGUE"
 STATE_TRANSITION = "TRANSITION"
 STATE_DICE_ROLL = "DICE_ROLL"
 STATE_COMBAT = "COMBAT"
+STATE_RUNNER = "RUNNER"
 STATE_END = "END" 
 
-current_map = "VILLAGE" # "VILLAGE", "FOREST", "STRANGE_PLACE"
+current_map = "VILLAGE" 
 end_message = ""
 
 # --- TYPY WALKI ---
 BOSS_MAMUNA = "MAMUNA (Pani Lasu)"
 BOSS_LATARNIK = "LATARNIK (Zwodzący Cień)"
 BOSS_PIEN = "PIEN (Zgniły Strażnik)"
-BOSS_KRZYKACZ = "KRZYKACZ (Bestia Dźwięku)"
+BOSS_KRZYKACZ_FOREST = "MŁODY KRZYKACZ"
 BOSS_TLUM = "TŁUM WIEŚNIAKÓW"
+BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
 # --- PROCEDURALNY SILNIK GRAFICZNY ---
 def draw_drozd(surface, x, y):
@@ -60,24 +62,10 @@ def draw_slavic_house(surface, x, y, width, height, roof_color=(110, 90, 60), ru
         pygame.draw.line(surface, line_color, (x, i), (x + width, i), 2)
     pygame.draw.rect(surface, (40, 25, 10) if not ruined else (15, 15, 15), (x + width//2 - 15, y + height - 40, 30, 40))
     if not ruined:
-        if width > 130: 
-            pygame.draw.rect(surface, (220, 140, 30), (x + 20, y + 45, 25, 25))
-            pygame.draw.rect(surface, (30, 20, 10), (x + 20, y + 45, 25, 25), 2)
         pygame.draw.polygon(surface, roof_color, [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)])
     else:
         pygame.draw.polygon(surface, (50, 45, 45), [(x - 10, y + 30), (x + width // 3, y + 5), (x + width + 10, y + 30)])
     pygame.draw.polygon(surface, (60, 45, 30) if not ruined else (10, 10, 10), [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)], 2)
-
-def draw_zuk(surface, x, y):
-    pygame.draw.rect(surface, (80, 110, 90), (x, y, 220, 90), border_radius=12)
-    pygame.draw.rect(surface, (90, 85, 75), (x+5, y-20, 140, 110), border_radius=5)
-    pygame.draw.line(surface, (60, 55, 45), (x+40, y-20), (x+40, y+90), 3)
-    pygame.draw.line(surface, (60, 55, 45), (x+90, y-20), (x+90, y+90), 3)
-    pygame.draw.polygon(surface, (120, 160, 190), [(x+155, y+10), (x+195, y+25), (x+205, y+50), (x+155, y+50)])
-    pygame.draw.circle(surface, (20, 20, 20), (x + 50, y + 90), 22)
-    pygame.draw.circle(surface, (100, 100, 100), (x + 50, y + 90), 8)
-    pygame.draw.circle(surface, (20, 20, 20), (x + 170, y + 90), 22)
-    pygame.draw.circle(surface, (100, 100, 100), (x + 170, y + 90), 8)
 
 def draw_tree(surface, x, y):
     pygame.draw.rect(surface, (30, 20, 15), (x + 12, y + 24, 8, 16))
@@ -90,12 +78,6 @@ def draw_well(surface, x, y):
     pygame.draw.line(surface, (95, 65, 45), (x + 6, y + 20), (x + 6, y + 2), 3)
     pygame.draw.line(surface, (95, 65, 45), (x + 39, y + 20), (x + 39, y + 2), 3)
     pygame.draw.polygon(surface, (130, 65, 40), [(x - 4, y + 4), (x + 22, y - 12), (x + 49, y + 4)])
-
-def draw_monster_shadow(surface, x, y, anim_tick):
-    radius = int(15 + math.sin(anim_tick * 0.1) * 4)
-    alpha_surf = pygame.Surface((60, 60), pygame.SRCALPHA)
-    pygame.draw.circle(alpha_surf, (80, 20, 90, 80), (30, 30), radius)
-    surface.blit(alpha_surf, (x - 10, y - 5))
 
 def draw_monster_latarnik(surface, x, y, anim_tick):
     offset_y = int(math.sin(anim_tick * 0.1) * 5)
@@ -115,11 +97,25 @@ def draw_monster_mamuna(surface, x, y, anim_tick):
     pygame.draw.circle(surface, (100, 120, 80), (x + 15 + offset_x, y), 9)
     pygame.draw.circle(surface, (255, 0, 0), (x + 15 + offset_x, y), 3)
 
-def draw_monster_krzykacz(surface, x, y, anim_tick):
-    scale = 1.0 + math.sin(anim_tick * 0.2) * 0.08
-    w, h = int(35 * scale), int(45 * scale)
-    pygame.draw.ellipse(surface, (70, 40, 85), (x - w//2 + 15, y - h//2 + 20, w, h))
-    pygame.draw.circle(surface, (10, 5, 15), (x + 15, y + 22), int(8 * scale))
+def draw_true_krzykacz(surface, x, y, anim_tick):
+    scale = 1.2 + math.sin(anim_tick * 0.1) * 0.05
+    w, h = int(50 * scale), int(90 * scale)
+    # Ciało (wilk dwunożny)
+    pygame.draw.ellipse(surface, (40, 35, 45), (x - w//2 + 10, y - h//2 + 20, w, h))
+    pygame.draw.polygon(surface, (30, 25, 35), [(x, y), (x-40, y-20), (x, y-40)]) # Łapa
+    pygame.draw.polygon(surface, (30, 25, 35), [(x+20, y), (x+60, y-20), (x+20, y-40)]) # Łapa
+    # Pazury
+    pygame.draw.line(surface, (200, 0, 0), (x-40, y-20), (x-55, y-10), 3)
+    pygame.draw.line(surface, (200, 0, 0), (x+60, y-20), (x+75, y-10), 3)
+    # Czaszka Jelenia
+    pygame.draw.polygon(surface, (220, 220, 200), [(x-15, y-h//2), (x+35, y-h//2), (x+10, y-h//2+30)])
+    pygame.draw.circle(surface, (20, 0, 0), (x-2, y-h//2+10), 5)
+    pygame.draw.circle(surface, (20, 0, 0), (x+22, y-h//2+10), 5)
+    # Poroże
+    pygame.draw.line(surface, (150, 140, 120), (x-5, y-h//2), (x-30, y-h//2-40), 4)
+    pygame.draw.line(surface, (150, 140, 120), (x+25, y-h//2), (x+50, y-h//2-40), 4)
+    pygame.draw.line(surface, (150, 140, 120), (x-20, y-h//2-20), (x-35, y-h//2-10), 3)
+    pygame.draw.line(surface, (150, 140, 120), (x+40, y-h//2-20), (x+55, y-h//2-10), 3)
 
 def draw_mob(surface, x, y, anim_tick):
     for i in range(3):
@@ -156,6 +152,17 @@ class Projectile:
     def draw(self, surface):
         pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.radius)
 
+class RunnerObstacle:
+    def __init__(self, x, y, width, height, type_id, speed):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.type = type_id # "LOG" lub "VINE"
+        self.speed = speed
+    def update(self):
+        self.rect.x -= self.speed
+    def draw(self, surface):
+        color = (80, 50, 30) if self.type == "LOG" else (40, 100, 40)
+        pygame.draw.rect(surface, color, self.rect, border_radius=4)
+
 class House:
     def __init__(self, x, y, w, h, name, dialog_func, roof_color=(110, 90, 60), ruined=False):
         self.rect = pygame.Rect(x, y, w, h)
@@ -174,46 +181,43 @@ clues_found = {
     "rozmowa_maria": False,
     "mamuna_rozmowa": False,
     "z_lusia": False,
-    "spotkal_dziadka": False
+    "spotkal_dziadka": False,
+    "zardzewialy_sztylet": False
 }
 
 def get_kapliczka_dialogue():
-    if clues_found["znaleziono_totem"]: return ("Stara kapliczka. Nic tu więcej nie znajdziesz.", [("Odejdź", "LEAVE")])
-    return ("Zaglądasz za starą kapliczkę. Wśród liści leży nadpalona, drewniana figurka...\nNależy do kogoś, komu spłonął dom.", 
-            [("Zabierz nadpalony talizman", "CLUE_TOTEM"), ("Zostaw to", "LEAVE")])
+    if clues_found["zardzewialy_sztylet"]: return ("Stara kapliczka. Zabrałeś stąd już wszystko.", [("Odejdź", "LEAVE")])
+    return ("Pod deskami starej kapliczki znajdujesz przedziwny artefakt...\nTo Zardzewiały Sztylet, emanujący chłodem.", 
+            [("Zabierz sztylet", "CLUE_DAGGER"), ("Zostaw go", "LEAVE")])
 
 def get_soltys_dialogue():
     if clues_found["zaufanie_soltysa"]: return ("Sołtys: Idź do Zielarki. Powiedz, że ja cię przysłałem.", [("Odejdź", "LEAVE")])
-    if clues_found["znaleziono_totem"]:
-        return ("Sołtys: Skąd masz ten talizman?! Dobra, to nie były wilki...\nAle darmowej wiedzy tu nie ma. Zapłać mi za fatygę.", 
-                [("Przekup Sołtysa (5 zł)", "PAY_SOLTYS"), ("Zostaw go", "LEAVE")])
-    return ("Sołtys: Czego tu szukasz? Wilki zjadły małego, to wielka tragedia.\nNie wtykaj nosa w nieswoje sprawy.", [("Wrócę później.", "LEAVE")])
+    return ("Sołtys: Czego tu szukasz? Wilki zjadły małego, to wielka tragedia.", [("Wrócę później.", "LEAVE")])
 
 def get_zielarka_dialogue():
     if clues_found["zaufanie_zielarki"]: return ("Zielarka: Przeszukaj piec w spalonej chacie.", [("Odejdź", "LEAVE")])
     if clues_found["zaufanie_soltysa"]:
-        return ("Zielarka: Bieniasz cię przysłał? Złóż ofiarę, a wskażę ci, czego szukać w ruinach.", 
+        return ("Zielarka: Bieniasz cię przysłał? Zapłać 5 zł, a wskażę ci ruinę.", 
                 [("Zapłać za wskazówkę (5 zł)", "PAY_ZIELARKA"), ("Odejdź", "LEAVE")])
-    return ("Zielarka: Udowodnij najpierw, że tutejsi chcą z tobą gadać.\nBez błogosławieństwa Sołtysa nic ci nie powiem.", [("Wyjdź z namiotu", "LEAVE")])
+    return ("Zielarka: Udowodnij najpierw, że tutejsi chcą z tobą gadać.", [("Wyjdź z namiotu", "LEAVE")])
 
 def get_ruiny_dialogue():
     if clues_found["zaufanie_zielarki"] and not clues_found["dowod_kosci"]:
-        return ("Rozgarniasz popiół w piecu. Znajdujesz drobne, zwęglone kości...\nIch budowa jest nienaturalna. Ktokolwiek tu spłonął, nie był człowiekiem.", 
-                [("Zabezpiecz dowód (Kości odmieńca)", "CLUE_KOSCI")])
+        return ("Rozgarniasz popiół w piecu. Znajdujesz zwęglone kości odmieńca...", 
+                [("Zabezpiecz dowód", "CLUE_KOSCI")])
     elif clues_found["dowod_kosci"]: return ("Masz już dowód. Czas porozmawiać z księdzem.", [("Odejdź", "LEAVE")])
-    return ("Osmalone ściany potęgują odór dawnego pożaru. Musisz kogoś wypytać, czego tu szukać.", [("Odejdź", "LEAVE")])
+    return ("Osmalone ściany potęgują odór dawnego pożaru.", [("Odejdź", "LEAVE")])
 
 def get_ksiadz_dialogue():
     if clues_found["rozmowa_maria"]:
-        return ("Maria (trzęsąc się): Mamuna uciekła do Głębokiego Lasu...\nZabrała moje prawdziwe dziecko! Błagam cię, Drozd, pomścij mnie.", 
+        return ("Maria: Mamuna uciekła do Lasu... Błagam cię, pomścij mnie.", 
                 [("Wyrusz z bronią do Głębokiego Lasu", "GO_TO_FOREST"), ("Daj mi chwilę", "LEAVE")])
     if clues_found["dowod_kosci"]:
-        return ("Ksiądz: Znalazłeś kości odmieńca. Więc to prawda... Maria wcale nie oszalała.\nUkryłem ją u siebie. Porozmawiaj z nią.", [("Porozmawiaj z Marią", "TALK_MARIA")])
-    return ("Ksiądz: Szczęść Boże. Wioska skrywa mrok. Zdobądź ich zaufanie, wtedy porozmawiamy.", [("Wyjdź", "LEAVE")])
+        return ("Ksiądz: To prawda... Maria miała rację. Ukryłem ją u siebie.", [("Porozmawiaj z Marią", "TALK_MARIA")])
+    return ("Ksiądz: Zdobądź zaufanie wsi, wtedy porozmawiamy.", [("Wyjdź", "LEAVE")])
 
 def get_bed_dialogue():
-    return ("Twoje posłanie w starej chacie po Mikołaju. Odpocznij przed trudami śledztwa.", 
-            [("Prześpij się (Regeneracja HP)", "SLEEP"), ("Wyjdź", "LEAVE")])
+    return ("Twoje posłanie w starej chacie po Mikołaju.", [("Prześpij się (Regeneracja HP)", "SLEEP"), ("Wyjdź", "LEAVE")])
 
 houses = [
     House(250, 60, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue),
@@ -225,14 +229,12 @@ houses = [
 ]
 
 decorations_trees = [(40, 260), (50, 500), (360, 180), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
-well_pos = pygame.Vector2(490, 420)
-village_shadows = [(450, 560), (820, 120), (750, 550), (70, 560)]
 forest_trees = [(random.randint(-10, WIDTH-20), random.randint(-10, HEIGHT-20)) for _ in range(80)]
 
 monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ_FOREST, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_MAMUNA, "beaten": False}
 ]
 
@@ -252,31 +254,38 @@ boss_mod_attack, boss_mod_stamina = 0, 0
 dialogue_title, dialogue_lines, dialogue_choices = "", [], []
 current_choice_idx = 0
 
+# Zmienne walki na arenie
 combat_projectiles, combat_bullets = [], []
 combat_timer = 0
 player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 100)
 
+# Zmienne Runnera (Ucieczki)
+runner_mode_vines = False
+runner_player_y = HEIGHT - 150
+runner_player_vy = 0
+runner_is_jumping = False
+runner_ground_y = HEIGHT - 150
+runner_obstacles = []
+runner_bolts = []
+runner_dziadek_hp = 150
+runner_dziadek_max_hp = 150
+runner_timer = 0
+
 font_main = pygame.font.SysFont("georgia", 20)
 font_sub = pygame.font.SysFont("arial", 15)
 font_title = pygame.font.SysFont("georgia", 24, bold=True)
-
-intro_sequence = [
-    {"title": "Wnętrze Żuka. Czuć benzynę.", "text": "Kierowca Władek: Mówię ci, panie Drozd. W Chołach to się porobiło niezłe bagno.\nDzieciaka w lesie znaleźli... rozszarpanego. Oficjalnie ponoć wilki."},
-    {"title": "Droga błotnista, pełna cieni.", "text": "Władek: Ale baby we wsi swoje wiedzą. Coś tu śmierdzi kłamstwem.\nJako psycholog powinieneś pogadać z ludźmi. Zmusić ich do gadania."}
-]
-intro_step = 0
-
-transition_sequence = [
-    {"title": "Na skraju lasu...", "text": "Drozd zostawia wieś za plecami i z bronią w ręku wkracza w gęstwinę.\nJako psycholog zawsze szukał racjonalnego wytłumaczenia, ale..."},
-    {"title": "Głęboki Las (Leże Mamuny)", "text": "To, co czai się w głębi kniei, nie jest tylko zrodzone z obłędu.\nCzas wyciągnąć broń i na własne oczy ujrzeć legendę..."}
-]
-transition_step = 0
 
 terrain_surface = pygame.Surface((WIDTH, HEIGHT))
 for ty in range(0, HEIGHT, 50):
     for tx in range(0, WIDTH, 50):
         base_g = random.randint(25, 38)
         pygame.draw.rect(terrain_surface, (int(base_g*0.85), base_g, int(base_g*0.65)), (tx, ty, 50, 50))
+
+intro_sequence = [
+    {"title": "Wnętrze Żuka. Czuć benzynę.", "text": "Kierowca Władek: W Chołach zjedli dzieciaka... węszy tu zło."},
+    {"title": "Wioska Choły.", "text": "Porozmawiaj z ludźmi. Znajdź poszlaki, by popchnąć sprawę do przodu."}
+]
+intro_step = 0
 
 # --- GŁÓWNA PĘTLA ---
 running = True
@@ -285,7 +294,7 @@ while running:
     clock.tick(60)
     keys = pygame.key.get_pressed()
 
-    # 1. RUCH
+    # 1. RUCH / EKSPLORACJA
     if current_state in [STATE_EXPLORE, STATE_HOUSE]:
         move_vector = pygame.Vector2(0, 0)
         if keys[pygame.K_w] or keys[pygame.K_UP]: move_vector.y -= 4
@@ -314,9 +323,8 @@ while running:
                             current_state = STATE_DIALOGUE
                             dialogue_title = "Leże Mamuny - Konfrontacja"
                             dialogue_lines = [
-                                "Mamuna z czułością gładzi owinięte w szmaty ludzkie niemowlę...",
-                                "Mamuna: Stój, łowco! Ta samica wcale go nie chciała, spaliła moje rodzone w piecu!",
-                                "Zostaw nas w spokoju i pozwól mi je odchować, a las nigdy więcej was nie skrzywdzi."
+                                "Mamuna gładzi ludzkie niemowlę...",
+                                "Zostaw nas w spokoju, a las nie skrzywdzi was więcej."
                             ]
                             dialogue_choices = [
                                 ("Oddaj dziecko i giń z moich rąk!", "FIGHT_MAMUNA"),
@@ -328,18 +336,12 @@ while running:
                             break
                         else:
                             current_state = STATE_DICE_ROLL
-                            p_d1, p_d2 = random.randint(1,6), random.randint(1,6)
-                            m_d1, m_d2 = random.randint(1,6), random.randint(1,6)
-                            mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
-                            boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
-                            boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
+                            boss_hp = boss_max_hp = 100
                             break
             
             elif current_map == "STRANGE_PLACE":
-                # Interakcja z Drzewem w nieznanym wymiarze
                 if pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2 - 50)) < 70:
                     current_state = STATE_DIALOGUE
-                    # Emulacja wciśnięcia klawisza dla wywołania dialogu drzewa
                     pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, c_code="TALK_TO_TREE"))
 
         elif current_state == STATE_HOUSE:
@@ -355,7 +357,7 @@ while running:
                 player_pos = pygame.Vector2(active_house.door_rect.centerx, active_house.door_rect.bottom + 20)
                 active_house = None
 
-    # WALKA
+    # WALKA - ARENA
     elif current_state == STATE_COMBAT:
         combat_timer += 1
         c_speed = 5
@@ -366,69 +368,99 @@ while running:
         player_combat_pos.x = max(100, min(WIDTH-100, player_combat_pos.x))
         player_combat_pos.y = max(150, min(HEIGHT-50, player_combat_pos.y))
         
-        if combat_timer % 40 == 0:
+        # Atak Bossa
+        fire_rate = 40 if active_boss_type != BOSS_TRUE_KRZYKACZ else 25
+        if combat_timer % fire_rate == 0:
             dx, dy = player_combat_pos.x - (WIDTH//2), player_combat_pos.y - 220
             dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
-            combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*6, (dy/dist)*6, (255, 60, 0), 8))
-        if combat_timer % 60 == 0: boss_hp -= (base_attack + mod_attack)
+            spd = 6 if active_boss_type != BOSS_TRUE_KRZYKACZ else 9
+            color = (255, 60, 0) if active_boss_type != BOSS_TRUE_KRZYKACZ else (100, 0, 0)
+            combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*spd, (dy/dist)*spd, color, 10))
+            
         if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
             combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -8, (255, 255, 255), 4))
 
         for b in combat_bullets:
             b.update()
-            if pygame.Vector2(b.x, b.y).distance_to(pygame.Vector2(WIDTH//2, 220)) < 35:
-                boss_hp -= (base_attack + mod_attack + 2)
+            if pygame.Vector2(b.x, b.y).distance_to(pygame.Vector2(WIDTH//2, 220)) < 45:
+                boss_hp -= 10
                 combat_bullets.remove(b)
             elif b.y < 100: combat_bullets.remove(b)
 
         for p in combat_projectiles:
             p.update()
             if pygame.Vector2(p.x, p.y).distance_to(player_combat_pos) < 20:
-                player_hp -= max(1, 6 + boss_mod_attack)
+                dmg = max(1, 10 + boss_mod_attack)
+                if active_boss_type == BOSS_TRUE_KRZYKACZ: dmg = 15
+                player_hp -= dmg
                 combat_projectiles.remove(p)
             elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT: combat_projectiles.remove(p)
 
-        if boss_hp <= 0:
-            if active_boss_type == BOSS_TLUM:
-                current_state = STATE_DIALOGUE
-                dialogue_title = "Cisza po burzy"
-                dialogue_lines = [
-                    "Zbroczony krwią stoisz nad ciałami mieszkańców Chołów.",
-                    "Przetrwałeś nocną masakrę. Twoje dłonie się trzęsą.",
-                    "Droga do Wrocławia stoi otworem, ale mroczny las wciąż wzywa..."
-                ]
-                dialogue_choices = [
-                    ("Wsiądź do Żuka i wracaj do Wrocławia (Koniec Gry)", "END_WROCLAW"),
-                    ("Skieruj się do lasu, by dokończyć śledztwo", "GO_FOREST_ALONE")
-                ]
-                current_choice_idx = 0
-                combat_projectiles.clear()
-                combat_bullets.clear()
+        # INSTA-KILL KRZYKACZA
+        if active_boss_type == BOSS_TRUE_KRZYKACZ and player_hp < player_max_hp / 3:
+            end_message = "Krzykacz ryczy przeraźliwie, podnosi cię potężnymi łapami...\nJego kościana szczęka jelenia zamyka się na twojej głowie.\nZostałeś pożarty. (GAME OVER)"
+            current_state = STATE_END
 
-            elif active_boss_type == BOSS_MAMUNA:
-                current_state = STATE_DIALOGUE
-                dialogue_title = "Nocny Atak w Chołach"
-                dialogue_lines = [
-                    "Mamuna padła martwa. Odzyskałeś dziecko i wróciłeś do chaty we wsi.",
-                    "W nocy budzi cię swąd dymu. Przez okno widzisz Sołtysa i tłum z pochodniami!",
-                    "Z cienia w pokoju wyłania się Lusia, córka Sołtysa. Jej oczy nienaturalnie błyszczą.",
-                    "Lusia: 'Chcą cię spalić za węszenie! Podaj mi dłoń, znam pradawne ścieżki!'"
-                ]
-                dialogue_choices = [
-                    ("Złap Lusię za rękę (Teleportacja z Lusią)", "LUSIA_TELEPORT"),
-                    ("Odepchnij ją. Ucieknę sam oknem! (Test Zręczności)", "LUSIA_REJECT")
-                ]
-                current_choice_idx = 0
-                combat_projectiles.clear()
-                combat_bullets.clear()
+        elif boss_hp <= 0:
+            if active_boss_type == BOSS_TRUE_KRZYKACZ:
+                end_message = "Zabiłeś Krzykacza. Prastara obrona lasu padła...\nDrwale z urzędu wkrótce zetną wszystko. Las umrze, ale Choły są bezpieczne."
+                current_state = STATE_END
             else:
                 for m in monster_triggers_forest:
                     if m["type"] == active_boss_type: m["beaten"] = True
                 current_state = STATE_EXPLORE
                 combat_projectiles.clear()
                 combat_bullets.clear()
+                
         elif player_hp <= 0:
             end_message = "Ciało Drozda dołączyło do rosnącej listy ofiar Przeklętego Lasu..."
+            current_state = STATE_END
+
+    # WALKA - RUNNER (Ucieczka przed Dziadkiem)
+    elif current_state == STATE_RUNNER:
+        runner_timer += 1
+        
+        # Grawitacja i skok
+        runner_player_vy += 1 
+        runner_player_y += runner_player_vy
+        if runner_player_y >= runner_ground_y:
+            runner_player_y = runner_ground_y
+            runner_is_jumping = False
+
+        if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and not runner_is_jumping:
+            runner_player_vy = -16
+            runner_is_jumping = True
+
+        # Generowanie przeszkód
+        if random.randint(1, 60) == 1:
+            o_type = "LOG"
+            if runner_mode_vines and random.choice([True, False]): o_type = "VINE"
+            runner_obstacles.append(RunnerObstacle(WIDTH + 50, runner_ground_y + 10, 30, 40, o_type, 7))
+
+        # Update przeszkód
+        for o in runner_obstacles[:]:
+            o.update()
+            # Kolizja gracza z przeszkodą
+            if o.rect.colliderect(pygame.Rect(400, runner_player_y, 30, 40)):
+                player_hp -= 15
+                runner_obstacles.remove(o)
+            elif o.rect.right < 0:
+                runner_obstacles.remove(o)
+
+        # Update bełtów z kuszy
+        for b in runner_bolts[:]:
+            b.x -= 10
+            # Kolizja z Dziadkiem (Dziadek stoi na ok. x=100)
+            if b.x < 150:
+                runner_dziadek_hp -= 10
+                runner_bolts.remove(b)
+
+        # Warunki wygranej/przegranej
+        if runner_dziadek_hp <= 0:
+            end_message = "Zgubiłeś Dziadka i zgładziłeś go z kuszy!\nUratowałeś drwali z urzędu. Lecz twój konflikt z Lasem dopiero się zaczął..."
+            current_state = STATE_END
+        elif player_hp <= 0:
+            end_message = "Potknąłeś się, a pnącza Leśnego Dziadka wciągnęły cię pod ziemię.\nStałeś się nawozem dla umierającej puszczy. (GAME OVER)"
             current_state = STATE_END
 
     # 2. EVENTY KEYBOARD
@@ -436,11 +468,7 @@ while running:
         if event.type == pygame.QUIT: running = False
         elif event.type == pygame.KEYDOWN:
             
-            # Wstrzyknięcie z emulacji z STATE_EXPLORE (drzewo)
-            if hasattr(event, 'c_code'):
-                c_code = event.c_code
-            else:
-                c_code = None
+            c_code = getattr(event, 'c_code', None)
 
             if current_state == STATE_INTRO:
                 if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
@@ -449,11 +477,13 @@ while running:
             
             elif current_state == STATE_TRANSITION:
                 if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                    transition_step += 1
-                    if transition_step >= len(transition_sequence):
-                        current_map = "FOREST"
-                        current_state = STATE_EXPLORE
-                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 100)
+                    current_map = "FOREST"
+                    current_state = STATE_EXPLORE
+                    player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 100)
+
+            elif current_state == STATE_RUNNER:
+                if event.key in [pygame.K_e, pygame.K_RETURN] and runner_timer % 15 != 0:
+                    runner_bolts.append(pygame.Rect(400, runner_player_y + 10, 15, 5))
 
             elif current_state == STATE_DIALOGUE:
                 if event.key in [pygame.K_w, pygame.K_UP] and not c_code: 
@@ -465,13 +495,12 @@ while running:
                         c_code = dialogue_choices[current_choice_idx][1]
                     
                     if c_code == "CLUE_TOTEM": clues_found["znaleziono_totem"] = True
+                    elif c_code == "CLUE_DAGGER": clues_found["zardzewialy_sztylet"] = True
                     elif c_code and c_code.startswith("PAY_"):
                         if player_money >= 5:
                             player_money -= 5
-                            if c_code == "PAY_SOLTYS": clues_found["zaufanie_soltysa"] = True
-                            elif c_code == "PAY_ZIELARKA": clues_found["zaufanie_zielarki"] = True
+                            if c_code == "PAY_ZIELARKA": clues_found["zaufanie_zielarki"] = True
                         else:
-                            dialogue_title = "Brak gotówki"
                             dialogue_lines = ["Nie masz czym zapłacić..."]
                             dialogue_choices = [("Odejdź...", "LEAVE")]
                             current_choice_idx = 0
@@ -488,151 +517,112 @@ while running:
                     elif c_code == "GO_TO_FOREST":
                         current_state = STATE_TRANSITION
                         continue
-                    elif c_code == "FIGHT_MAMUNA":
-                        current_state = STATE_DICE_ROLL
-                        active_boss_type = BOSS_MAMUNA
-                        p_d1, p_d2 = random.randint(1,6), random.randint(1,6)
-                        m_d1, m_d2 = random.randint(1,6), random.randint(1,6)
-                        mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
-                        boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
-                        boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
-                        continue
-                    elif c_code == "SPARE_MAMUNA":
-                        dialogue_title = "Nocny Atak w Chołach"
-                        dialogue_lines = [
-                            "Zostawiłeś dziecko Mamunie i w poczuciu rezygnacji wróciłeś do chaty we wsi.",
-                            "W nocy budzi cię swąd dymu. Przez okno widzisz Sołtysa i tłum z pochodniami!",
-                            "Z cienia w pokoju wyłania się Lusia, córka Sołtysa. Jej oczy nienaturalnie błyszczą.",
-                            "Lusia: 'Chcą cię spalić za węszenie! Podaj mi dłoń, znam pradawne ścieżki!'"
-                        ]
-                        dialogue_choices = [
-                            ("Złap Lusię za rękę (Teleportacja z Lusią)", "LUSIA_TELEPORT"),
-                            ("Odepchnij ją. Ucieknę sam oknem! (Test Zręczności)", "LUSIA_REJECT")
-                        ]
-                        current_choice_idx = 0
-                        continue
                     
-                    # Logika Nocnego Ataku i Lusi
-                    elif c_code == "LUSIA_TELEPORT":
-                        clues_found["z_lusia"] = True
-                        current_map = "STRANGE_PLACE"
-                        current_state = STATE_DIALOGUE
-                        dialogue_title = "Jądro Lasu"
-                        dialogue_lines = [
-                            "Teleportujesz się z Lusią przed gigantyczne Drzewo z ludzką twarzą.",
-                            "Lusia: 'To duch lasu, mój prawdziwy ojciec. Bieniasz tylko mnie krył.'",
-                            "Podejdź i z nim porozmawiaj."
-                        ]
-                        dialogue_choices = [("Zbadaj Wielkie Drzewo", "EXPLORE_TREE")]
-                        current_choice_idx = 0
-                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
-                        continue
-                        
-                    elif c_code == "LUSIA_REJECT":
-                        roll = random.randint(1,6) + random.randint(1,6)
-                        if roll >= 7:
-                            end_message = f"Wynik Zręczności: {roll} (Sukces!). Zwinny jak kot wyskakujesz oknem,\nomijasz widły i znikasz w ciemnościach lasu. Udało ci się ujść z życiem."
-                            current_state = STATE_END
-                        else:
-                            dialogue_title = "Zasadzka!"
-                            dialogue_lines = [
-                                f"Wynik Zręczności: {roll} (Porażka!). Potykasz się o framugę",
-                                "i spadasz prosto w rozwścieczony tłum z pochodniami!",
-                                "Sołtys Bieniasz: 'Zabić miastowego! Wie za dużo!'"
-                            ]
-                            dialogue_choices = [("Wyciągnij broń i walcz o życie!", "FIGHT_MOB")]
-                            current_choice_idx = 0
-                        continue
-                        
-                    elif c_code == "FIGHT_MOB":
-                        current_state = STATE_COMBAT
-                        active_boss_type = BOSS_TLUM
-                        boss_hp = boss_max_hp = 180
-                        boss_mod_attack, boss_mod_stamina = 2, 8
-                        player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
-                        continue
-                        
-                    elif c_code == "END_WROCLAW":
-                        end_message = "Uciekłeś z Chołów, zostawiając za sobą stos ciał.\nWrocław wydaje się bezpieczny, ale w nocy wciąż słyszysz wycie z Głębokiego Lasu..."
-                        current_state = STATE_END
-                        continue
-                        
-                    elif c_code == "GO_FOREST_ALONE":
-                        current_map = "FOREST"
-                        clues_found["z_lusia"] = False
-                        current_state = STATE_DIALOGUE
-                        dialogue_title = "Zagubiony w Gęstwinie"
-                        dialogue_lines = [
-                            "Błąkasz się po lesie, oganiając od wilków.",
-                            "Nagle drogę zachodzi ci potężna, pokryta mchem i liśćmi sylwetka.",
-                            "Leśny Dziadek: 'Ludzki smród... Skądżeś się tu wziął, robaku?'"
-                        ]
-                        dialogue_choices = [
-                            ("Powiedz prawdę o wyrżnięciu wioski", "DZIADEK_TRUTH"),
-                            ("Skłam, że szukasz ziół (Test Charyzmy)", "DZIADEK_LIE")
-                        ]
-                        current_choice_idx = 0
-                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
-                        continue
-
-                    elif c_code == "DZIADEK_TRUTH":
-                        end_message = "Leśny Dziadek ryknął gniewem. 'Krew za krew!'\nZanim zdążyłeś dobyć broni, korzenie przebiły twoją klatkę piersiową."
-                        current_state = STATE_END
-                        continue
-
-                    elif c_code == "DZIADEK_LIE":
-                        roll = random.randint(1,6) + random.randint(1,6)
-                        if roll >= 7:
-                            dialogue_title = "Leśny Dziadek - Przekonany"
-                            dialogue_lines = [
-                                f"Wynik Charyzmy: {roll} (Sukces!). Dziadek mruczy pod nosem.",
-                                "Leśny Dziadek: 'Zioła, powiadasz... Chodź za mną, zaprowadzę cię do Jądra Lasu.'",
-                                "Oplata cię winorośl i ciągnie w górę, na wyższe piętro lasu."
-                            ]
-                            dialogue_choices = [("Podążaj za dziadkiem", "MEET_TREE_ALONE")]
-                            current_choice_idx = 0
-                        else:
-                            end_message = f"Wynik Charyzmy: {roll} (Porażka!). Dziadek przejrzał twoje kłamstwo.\nZostałeś wchłonięty przez puszczę, stając się nawozem."
-                            current_state = STATE_END
-                        continue
-                        
-                    elif c_code == "MEET_TREE_ALONE":
-                        clues_found["z_lusia"] = False
-                        clues_found["spotkal_dziadka"] = True
-                        current_map = "STRANGE_PLACE"
-                        current_state = STATE_EXPLORE
-                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
-                        continue
-
-                    elif c_code == "EXPLORE_TREE":
-                        current_state = STATE_EXPLORE
-                        continue
-
+                    # LOGIKA JĄDRA LASU (Wywód Drzewa, Drwale i Krzykacz)
                     elif c_code == "TALK_TO_TREE":
                         dialogue_title = "Rozmowa z Duchem Lasu"
                         dialogue_lines = [
-                            "Drzewo dygocze: 'Człowiecze... Mój czas dobiega końca.'",
-                            "'Ludzie przestali wierzyć w demony. Las umiera, bo zapomnieli o strachu.'",
-                            "'Nasza moc słabnie z każdym zgaszonym ogniskiem, z każdą ściętą sosną...'"
+                            "Duch Lasu: 'Mój czas dobiega końca. A jakby tego było mało, urząd powiatowy",
+                            "chce przysłać drwali z piłami, by ściąć resztę Chołów!'",
+                            "Leśny Dziadek uśmiecha się zimno: 'Obudzimy Krzykacza. Przerobi ich",
+                            "wszystkich na gęsty, mięsny dżem. Las pochłonie ich krew.'",
+                            "Drozd ukrywa przerażenie... Musi powstrzymać rzeź, ale jak?"
+                        ]
+                        dialogue_choices = [
+                            ("Atakuj Dziadka kuszą z zaskoczenia! (Walka - Trudne)", "TREE_FIGHT_DZIADEK"),
+                            ("Okłam ich: 'Urząd wycofał drwali!' (Test Charyzmy)", "TREE_LIE_1")
                         ]
                         if clues_found.get("z_lusia", False):
-                            dialogue_lines.append("Nagle pojawia się Leśny Dziadek. Pyta Lusię kim jesteś.")
-                            dialogue_lines.append("Lusia szybko nakłada ci maskę jelenia. 'To nowy demon, ojcze.'")
-                        else:
-                            dialogue_lines.append("Lusia stoi obok pnia, spoglądając na ciebie z nieufnością.")
-                            dialogue_lines.append("Zaraz potem zjawia się Leśny Dziadek i staje u twego boku.")
-                            
-                        dialogue_choices = [("Wysłuchaj proroctwa (Ciąg dalszy nastąpi...)", "GAME_TBC")]
-                        current_choice_idx = 0
-                        player_pos.y += 20 # Przesunięcie by gracz nie wpadł w pętlę od razu
-                        continue
+                            dialogue_choices.append(("Przekonaj Lusię by ich powstrzymała (+2 Charyzma)", "TREE_LUSIA"))
+                        if clues_found.get("zardzewialy_sztylet", False):
+                            dialogue_choices.append(("[PRZEDMIOT] Wbij Zardzewiały Sztylet w Drzewo!", "TREE_STAB"))
                         
-                    elif c_code == "GAME_TBC":
-                        end_message = "Koniec Rozdziału 1. Odkryłeś tajemnice Głębokiego Lasu.\nDrozd stoi przed wyborem: uratować umierający mit, czy go zniszczyć?"
-                        current_state = STATE_END
+                        current_choice_idx = 0
+                        player_pos.y += 20 
                         continue
 
-                    # Jeśli to zwykłe opuszczenie lokacji/dialogu (LEAVE)
+                    elif c_code == "TREE_STAB":
+                        dialogue_title = "Krzykacz Przebudzony!"
+                        dialogue_lines = [
+                            "Wbijasz sztylet w rdzeń Ducha Lasu. Drzewo wyje z bólu!",
+                            "Ziemia pęka. Z otchłani wynurza się gigantyczny wilk z czaszką jelenia.",
+                            "Prawdziwy Krzykacz ryczy. Rozpoczyna się ostateczna bitwa."
+                        ]
+                        dialogue_choices = [("Zdobądź broń, to jest to! (Walka o życie)", "START_KRZYKACZ_FIGHT")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "START_KRZYKACZ_FIGHT":
+                        current_state = STATE_COMBAT
+                        active_boss_type = BOSS_TRUE_KRZYKACZ
+                        boss_hp = boss_max_hp = 300
+                        boss_mod_attack = 5
+                        combat_timer = 0
+                        combat_projectiles.clear()
+                        continue
+
+                    elif c_code == "TREE_FIGHT_DZIADEK":
+                        current_state = STATE_RUNNER
+                        runner_mode_vines = False
+                        runner_dziadek_hp = runner_dziadek_max_hp = 150
+                        runner_obstacles.clear()
+                        runner_timer = 0
+                        continue
+
+                    elif c_code == "TREE_LIE_1":
+                        roll = random.randint(1,6) + random.randint(1,6)
+                        if roll >= 7:
+                            dialogue_title = "Charyzma (Sukces!)"
+                            dialogue_lines = [
+                                "Dziadek zawahał się, ale Duch Lasu wtrąca się:",
+                                "Duch Lasu: 'Czuję kłamstwo. Korzenie mówią co innego. Śledzą nas.'",
+                                "Musisz przekonać Ducha, że masz pewne źródło z Urzędu (Próg: rzuć 6)."
+                            ]
+                            dialogue_choices = [("Spróbuj przekonać Ducha (Rzut 1d6)", "TREE_LIE_2")]
+                            current_choice_idx = 0
+                        else:
+                            dialogue_title = "Charyzma (Porażka!)"
+                            dialogue_lines = ["Leśny Dziadek: 'Łżesz, psie miastowy!' Rzuca się na ciebie!"]
+                            dialogue_choices = [("Uciekaj! (Walka)", "TREE_FIGHT_DZIADEK")]
+                            current_choice_idx = 0
+                        continue
+
+                    elif c_code == "TREE_LIE_2":
+                        roll = random.randint(1,6)
+                        if roll == 6:
+                            end_message = "Wynik: 6! Duch Lasu uwierzył ci, że jesteś ich wtyczką w urzędzie.\nWypuszczenie Krzykacza zostaje opóźnione o 3 dni. Uratowałeś drwali!\n(SUKCES - Koniec Epizodu)"
+                            current_state = STATE_END
+                        else:
+                            dialogue_title = "Charyzma (Porażka!)"
+                            dialogue_lines = [f"Wynik: {roll}. Duch Lasu oplata cię pnączami! 'KŁAMCA!'"]
+                            dialogue_choices = [("Uciekaj! (Walka z przeszkodami pnączy)", "TREE_FIGHT_DZIADEK_HARD")]
+                            current_choice_idx = 0
+                        continue
+
+                    elif c_code == "TREE_LUSIA":
+                        roll = random.randint(1,6) + random.randint(1,6) + 2
+                        if roll >= 8:
+                            end_message = f"Wynik z Lusią: {roll}. Lusia staje w twojej obronie.\nOna przekonuje Ducha Lasu, by odroczyć pobudkę Krzykacza o 3 dni.\nPokój, póki co, został zachowany. (SUKCES - Koniec Epizodu)"
+                            current_state = STATE_END
+                        else:
+                            dialogue_title = "Zdrada!"
+                            dialogue_lines = [
+                                f"Wynik: {roll} (Porażka!). Lusia odsuwa się z odrazą.",
+                                "Lusia: 'On kłamie Ojcze! To zdrajca, zabijcie go!'",
+                                "Ziemia pod tobą eksploduje tysiącem pnączy!"
+                            ]
+                            dialogue_choices = [("Uciekaj! (Walka + Pnącza)", "TREE_FIGHT_DZIADEK_HARD")]
+                            current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "TREE_FIGHT_DZIADEK_HARD":
+                        current_state = STATE_RUNNER
+                        runner_mode_vines = True
+                        runner_dziadek_hp = runner_dziadek_max_hp = 180
+                        runner_obstacles.clear()
+                        runner_timer = 0
+                        continue
+
                     if current_map == "VILLAGE":
                         current_state = STATE_HOUSE
                         player_pos.y += 70 
@@ -642,53 +632,34 @@ while running:
 
             elif current_state == STATE_END:
                 if event.key == pygame.K_ESCAPE: running = False
-            
-            elif current_state == STATE_DICE_ROLL:
-                if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                    current_state = STATE_COMBAT
-                    combat_timer = 0
-                    combat_projectiles.clear()
-                    player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
 
     # 3. RENDEROWANIE
     if current_state == STATE_INTRO:
         screen.fill((12, 15, 12))
-        if intro_step < 1: draw_zuk(screen, WIDTH//2 - 100 + int(math.sin(anim_tick * 0.1) * 3), HEIGHT//2 - 60)
-        else:
-            draw_slavic_house(screen, WIDTH//2 - 100, HEIGHT//2 - 150, 200, 150, roof_color=(130, 50, 40))
-            draw_drozd(screen, WIDTH//2 - 40, HEIGHT//2 + 20)
         screen.blit(font_title.render(intro_sequence[intro_step]["title"], True, (180, 200, 180)), (80, HEIGHT - 180))
-        for idx, l in enumerate(intro_sequence[intro_step]["text"].split('\n')):
-            screen.blit(font_main.render(l, True, (240, 240, 220)), (80, HEIGHT - 130 + idx*30))
+        screen.blit(font_main.render(intro_sequence[intro_step]["text"], True, (240, 240, 220)), (80, HEIGHT - 130))
             
     elif current_state == STATE_TRANSITION:
         screen.fill((10, 15, 12))
-        screen.blit(font_title.render(transition_sequence[transition_step]["title"], True, (120, 180, 120)), (80, HEIGHT - 180))
-        for idx, l in enumerate(transition_sequence[transition_step]["text"].split('\n')):
-            screen.blit(font_main.render(l, True, (200, 210, 200)), (80, HEIGHT - 130 + idx*30))
+        screen.blit(font_title.render("Wejście w głąb puszczy...", True, (120, 180, 120)), (80, HEIGHT - 180))
 
     elif current_state in [STATE_EXPLORE, STATE_HOUSE, STATE_DIALOGUE, STATE_DICE_ROLL]:
         if current_map == "VILLAGE":
             screen.blit(terrain_surface, (0, 0))
             for tx, ty in decorations_trees: draw_tree(screen, tx, ty)
-            draw_well(screen, int(well_pos.x), int(well_pos.y))
+            draw_well(screen, 490, 420)
             for h in houses:
                 draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
         
         elif current_map == "FOREST":
             screen.fill((20, 25, 20))
             for tx, ty in forest_trees: draw_tree(screen, tx, ty)
-            for m in monster_triggers_forest:
-                if not m["beaten"]:
-                    pygame.draw.rect(screen, (255, 0, 0), m["rect"], 2) 
         
         elif current_map == "STRANGE_PLACE":
             screen.fill((15, 10, 20)) 
             draw_wielkie_drzewo(screen, WIDTH//2 - 60, HEIGHT//2 - 150)
-            if clues_found.get("z_lusia", False):
-                draw_lusia(screen, WIDTH//2 + 80, HEIGHT//2 + 50)
-            elif clues_found.get("spotkal_dziadka", False):
-                draw_lesny_dziadek(screen, WIDTH//2 + 80, HEIGHT//2 + 50)
+            if clues_found.get("z_lusia", False): draw_lusia(screen, WIDTH//2 + 80, HEIGHT//2 + 50)
+            draw_lesny_dziadek(screen, WIDTH//2 - 80, HEIGHT//2 + 50)
 
         if current_state in [STATE_EXPLORE, STATE_HOUSE]:
             draw_drozd(screen, int(player_pos.x), int(player_pos.y))
@@ -711,34 +682,44 @@ while running:
         
         pygame.draw.rect(screen, (0, 0, 50), (20, HEIGHT - 40, 200, 20))
         pygame.draw.rect(screen, (0, 100, 255), (20, HEIGHT - 40, 200 * (player_hp / player_max_hp), 20))
-        screen.blit(font_sub.render(f"HP Drozda: {player_hp}/{player_max_hp}", True, (200, 200, 255)), (20, HEIGHT - 65))
-
-        if active_boss_type == BOSS_TLUM:
-            draw_mob(screen, WIDTH//2, 220, anim_tick)
-        elif active_boss_type == BOSS_LATARNIK:
-            draw_monster_latarnik(screen, WIDTH//2 - 15, 200, anim_tick)
-        elif active_boss_type == BOSS_PIEN:
-            draw_monster_pien(screen, WIDTH//2 - 20, 200)
-        elif active_boss_type == BOSS_KRZYKACZ:
-            draw_monster_krzykacz(screen, WIDTH//2, 220, anim_tick)
-        elif active_boss_type == BOSS_MAMUNA:
-            draw_monster_mamuna(screen, WIDTH//2, 220, anim_tick)
+        
+        if active_boss_type == BOSS_TRUE_KRZYKACZ: draw_true_krzykacz(screen, WIDTH//2, 220, anim_tick)
 
         draw_drozd(screen, int(player_combat_pos.x), int(player_combat_pos.y))
         for p in combat_projectiles: p.draw(screen)
         for b in combat_bullets: b.draw(screen)
 
+    elif current_state == STATE_RUNNER:
+        screen.fill((15, 25, 15))
+        pygame.draw.line(screen, (80, 60, 40), (0, runner_ground_y + 40), (WIDTH, runner_ground_y + 40), 10)
+        
+        # UI
+        pygame.draw.rect(screen, (0, 0, 50), (20, 20, 200, 20))
+        pygame.draw.rect(screen, (0, 100, 255), (20, 20, 200 * (player_hp / player_max_hp), 20))
+        screen.blit(font_sub.render("HP Drozda", True, (255,255,255)), (25, 22))
+
+        pygame.draw.rect(screen, (50, 0, 0), (WIDTH - 220, 20, 200, 20))
+        pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 220, 20, 200 * (runner_dziadek_hp / runner_dziadek_max_hp), 20))
+        screen.blit(font_sub.render("HP Leśnego Dziadka", True, (255,255,255)), (WIDTH - 215, 22))
+
+        screen.blit(font_main.render("[SPACE] - Skok  |  [E] - Strzał do tyłu", True, (150, 150, 150)), (WIDTH//2 - 150, 60))
+
+        # Rysowanie jednostek
+        draw_drozd(screen, 400, int(runner_player_y))
+        draw_lesny_dziadek(screen, 100, runner_ground_y + int(math.sin(runner_timer*0.2)*5))
+        
+        for o in runner_obstacles: o.draw(screen)
+        for b in runner_bolts: pygame.draw.rect(screen, (200, 200, 200), b)
+
     elif current_state == STATE_DICE_ROLL:
         screen.fill((20, 20, 25))
-        screen.blit(font_title.render("Test Inicjatywy i Przewagi!", True, (200, 200, 150)), (WIDTH//2 - 150, HEIGHT//2 - 100))
-        screen.blit(font_main.render(f"Rzut Drozda: {p_d1} + {p_d2} = {p_d1+p_d2}", True, (150, 200, 150)), (WIDTH//2 - 120, HEIGHT//2 - 40))
-        screen.blit(font_main.render(f"Rzut Bestii: {m_d1} + {m_d2} = {m_d1+m_d2}", True, (200, 100, 100)), (WIDTH//2 - 120, HEIGHT//2))
-        screen.blit(font_main.render("[Wciśnij ENTER aby walczyć (Spacja to strzał)]", True, (100, 100, 100)), (WIDTH//2 - 180, HEIGHT//2 + 60))
+        screen.blit(font_main.render("[Wciśnij ENTER]", True, (100, 100, 100)), (WIDTH//2 - 100, HEIGHT//2))
 
     elif current_state == STATE_END:
         screen.fill((0, 0, 0))
         for idx, l in enumerate(end_message.split('\n')):
-            screen.blit(font_title.render(l, True, (200, 50, 50)), (WIDTH//2 - 350, HEIGHT//2 - 50 + idx*40))
+            screen.blit(font_title.render(l, True, (200, 50, 50)), (WIDTH//2 - 400, HEIGHT//2 - 50 + idx*40))
+        screen.blit(font_sub.render("[ESC] - Wyjście", True, (100,100,100)), (WIDTH//2 - 50, HEIGHT - 50))
 
     pygame.display.flip()
 
