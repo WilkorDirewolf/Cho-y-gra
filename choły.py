@@ -437,6 +437,8 @@ clues_found = {
     "klamstwo_zielarka_porazka": False,
     "zna_sekretny_schowek": False,
     "latarnia_odebrana": False
+    "quest_zielarka_zaczety": False,
+    "ma_ksiege_zielarki": False
 }
 
 def get_kapliczka_dialogue():
@@ -460,8 +462,12 @@ def get_zielarka_dialogue():
             return ("Zielarka: Szukaj w spalonej chacie, głupcze.", [("Odejdź", "LEAVE")])
         return ("Zielarka: Użyj tego Amuletu przeciw demonom... [ZDOBYTO AMULET]", [("Schowaj amulet i odejdź", "CLUE_AMULET")])
     
-    if clues_found["klamstwo_zielarka_porazka"]:
-        return ("Zielarka: Wynoś się stąd, kłamco! Przejrzałam cię!", [("Odejdź (Zablokowana opcja)", "LEAVE")])
+    # Obsługa questa po zawalonym teście charyzmy
+    if clues_found["quest_zielarka_zaczety"] and not clues_found["zaufanie_zielarki"]:
+        if clues_found["ma_ksiege_zielarki"]:
+            return ("Zielarka: Widzę, że odzyskałeś moją księgę! Wspaniale.", [("Oddaj księgę i dowiedz się prawdy", "ODDAJ_KSIEGE_ZIELARCE")])
+        else:
+            return ("Zielarka: Bez mojej księgi od Maćka nie mamy o czym rozmawiać.", [("Odejdź", "LEAVE")])
     
     choices = [("Odejdź", "LEAVE")]
     
@@ -486,8 +492,15 @@ def get_plebania_dialogue():
     if clues_found["ma_upowaznienie_maciek"]:
         return ("Maciek: Błagam, jedź do Marii. Mój Żuk stoi na wschodnim skraju wsi.", [("Odejdź", "LEAVE")])
     if clues_found["dowod_kosci"]:
-        return ("Maciek: Te kości... Więc to prawda! To nie ona spaliła nasze dziecko!\nWeź to upoważnienie i jedź do niej do szpitala w Choroszczy.", [("Weź upoważnienie", "GET_UPOWAZNIENIE")])
-    return ("Przed plebanią siedzi Maciek.\nMaciek: Zostaw mnie... Moje dziecko nie żyje, a żonę zabrali do Choroszczy...", [("Wyjdź", "LEAVE")])
+        return ("Maciek: Te kości... Więc to prawda! Ona nie spaliła naszego dziecka!\nWeź to upoważnienie i jedź do niej do szpitala w Choroszczy.", [("Weź upoważnienie", "GET_UPOWAZNIENIE")])
+    
+    choices = [("Wyjdź", "LEAVE")]
+    
+    # Dodanie opcji zapytania o księgę, jeśli quest się rozpoczął
+    if clues_found["quest_zielarka_zaczety"] and not clues_found["ma_ksiege_zielarki"]:
+        choices.insert(0, ("Zielarka przysłała mnie po jej księgę.", "ZAPYTAC_MACKA_O_KSIEGE"))
+        
+    return ("Przed plebanią siedzi Maciek.\nMaciek: Zostaw mnie... Moje dziecko nie żyje, a żonę zabrali do Choroszczy...", choices)
 
 def get_zuk_dialogue():
     if clues_found["wiedza_o_mamunie"]:
@@ -945,13 +958,49 @@ while running:
                             ]
                             dialogue_choices = [("Dobrze (Zaoszczędzono 5 zł)", "LEAVE")]
                         else:
+                            # --- ZMIENIONY FRAGMENT (POCZĄTEK) ---
                             clues_found["klamstwo_zielarka_porazka"] = True
+                            clues_found["quest_zielarka_zaczety"] = True
                             dialogue_title = "Charyzma: Porażka!"
                             dialogue_lines = [
                                 f"Wynik: {roll}. Zawahałeś się.",
-                                "Zielarka pluje ci pod nogi: 'Kłamiesz jak pies! Wynocha z mojego namiotu!'"
+                                "Zielarka mruży oczy: 'Kłamiesz... Ale widzę, że ci zależy na tej informacji.",
+                                "Przynieś mi moją starą księgę, którą zarekwirował Maciek z Plebanii,",
+                                "a powiem ci, gdzie masz szukać.' "
                             ]
-                            dialogue_choices = [("Wycofaj się ze wstydu", "LEAVE")]
+                            dialogue_choices = [("Zgoda. Porozmawiam z Maćkiem.", "LEAVE")]
+                            # --- ZMIENIONY FRAGMENT (KONIEC) ---
+                        current_choice_idx = 0
+                        continue
+
+                    # --- NOWE EVENTY FABULARNE ---
+                    elif c_code == "ZAPYTAC_MACKA_O_KSIEGE":
+                        dialogue_title = "Odzyskanie Księgi"
+                        dialogue_lines = [
+                            "Maciek wzdycha ciężko.",
+                            "'Ta stara wiedźma... Jej księga śmierdzi bagnem, ale teraz mi już wszystko jedno.",
+                            "Weź ją, niech udławi się swoimi guślami.'"
+                        ]
+                        dialogue_choices = [("Zabierz księgę", "WEZ_KSIEGE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "WEZ_KSIEGE":
+                        clues_found["ma_ksiege_zielarki"] = True
+                        dialogue_title = "Przedmiot zdobyty"
+                        dialogue_lines = ["Otrzymałeś starą, zakurzoną księgę. Czas wrócić do Zielarki."]
+                        dialogue_choices = [("Odejdź", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "ODDAJ_KSIEGE_ZIELARCE":
+                        clues_found["zaufanie_zielarki"] = True
+                        dialogue_title = "Dług spłacony"
+                        dialogue_lines = [
+                            "Zielarka z chciwością chowa księgę w fałdach szat.",
+                            "'Słowo się rzekło. Jeśli szukasz potworów, zacznij od przeszukania pieca w spalonej chacie Marii...'"
+                        ]
+                        dialogue_choices = [("Ruszaj", "LEAVE")]
                         current_choice_idx = 0
                         continue
 
