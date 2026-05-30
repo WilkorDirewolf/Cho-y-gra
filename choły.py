@@ -329,6 +329,8 @@ clues_found = {
     "dowod_kosci": False,
     "rozmowa_maria": False,
     "mamuna_rozmowa": False,
+    "mamuna_zalatwiona": False,
+    "ruiny_skarb": False,
     "z_lusia": False,
     "spotkal_dziadka": False,
     "zardzewialy_sztylet": False,
@@ -367,6 +369,9 @@ def get_zielarka_dialogue():
     return ("Zielarka: Udowodnij najpierw, że tutejsi chcą z tobą gadać.", [("Wyjdź z namiotu", "LEAVE")])
 
 def get_ruiny_dialogue():
+    if clues_found.get("mamuna_zalatwiona", False) and not clues_found.get("ruiny_skarb", False):
+        return ("Powracasz do spalonych ruin. W świetle księżyca dostrzegasz coś błyszczącego pod deską...", 
+                [("Przeszukaj gruzy", "CLUE_RUINY_SKARB")])
     if clues_found["zaufanie_zielarki"] and not clues_found["dowod_kosci"]:
         return ("Rozgarniasz popiół w piecu. Znajdujesz zwęglone kości odmieńca...", 
                 [("Zabezpiecz dowód", "CLUE_KOSCI")])
@@ -382,6 +387,8 @@ def get_ksiadz_dialogue():
     return ("Ksiądz: Zdobądź zaufanie wsi, wtedy porozmawiamy.", [("Wyjdź", "LEAVE")])
 
 def get_bed_dialogue():
+    if clues_found.get("mamuna_zalatwiona", False):
+        return ("Czujesz dziwny, mroczny niepokój unoszący się nad Chołami...", [("Połóż się spać (Rozpocznij kolejny akt)", "TRIGGER_MOB_EVENT")])
     return ("Twoje posłanie w starej chacie po Mikołaju.", [("Prześpij się (Regeneracja HP)", "SLEEP"), ("Wyjdź", "LEAVE")])
 
 houses = [
@@ -598,7 +605,7 @@ while running:
             b.update()
             target_pos = latarnik_pos if active_boss_type == BOSS_LATARNIK else pygame.Vector2(WIDTH//2, 220)
             if pygame.Vector2(b.x, b.y).distance_to(target_pos) < 45:
-                boss_hp -= max(1, 10 + mod_attack)
+                boss_hp -= max(1, base_attack + mod_attack)
                 combat_bullets.remove(b)
             elif b.y < 100: combat_bullets.remove(b)
 
@@ -625,9 +632,11 @@ while running:
             elif active_boss_type == BOSS_MAMUNA:
                 for m in monster_triggers_forest:
                     if m["type"] == active_boss_type: m["beaten"] = True
-                current_map = "STRANGE_PLACE"
-                current_state = STATE_EXPLORE
-                player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
+                current_state = STATE_DIALOGUE
+                dialogue_title = "Zwycięstwo nad Mamuną"
+                dialogue_lines = ["Mamuna z krzykiem rozpływa się w gąszczu...", "Czujesz ekstremalne zmęczenie. Lepiej wróć do wioski na odpoczynek."]
+                dialogue_choices = [("Wróć do Chołów", "RETURN_TO_VILLAGE")]
+                current_choice_idx = 0
                 combat_projectiles.clear()
                 combat_bullets.clear()
             else:
@@ -751,6 +760,16 @@ while running:
                         current_state = STATE_EXPLORE
                         player_pos.y += 70
                         continue
+
+                    elif c_code == "CLUE_RUINY_SKARB":
+                        clues_found["ruiny_skarb"] = True
+                        player_money += 20
+                        base_attack += 5
+                        dialogue_title = "Cenna Zdobycz!"
+                        dialogue_lines = ["Znalazłeś porzuconą sakiewkę (+20 zł) oraz stary kamień szlifierski.", "Twoja broń zadaje teraz większe obrażenia (+5 Atak)!"]
+                        dialogue_choices = [("Świetnie!", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
                         
                     elif c_code and c_code.startswith("PAY_"):
                         if player_money >= 5:
@@ -774,6 +793,91 @@ while running:
                         dialogue_lines = ["Zabezpieczasz nadpalone kości odmieńca. Ksiądz musi o tym wiedzieć!"]
                         dialogue_choices = [("Schowaj do torby", "LEAVE")]
                         current_choice_idx = 0
+                        continue
+
+                    elif c_code == "TRIGGER_MOB_EVENT":
+                        dialogue_title = "Środek Nocy - Bunt!"
+                        dialogue_lines = [
+                            "Nagle budzi cię ostre szarpanie! To Lusia.",
+                            "Lusia: 'Drozd, wstawaj! Sołtys i inni dowiedzieli się o twoich spacerach",
+                            "w lesie... Zebrali chłopów z widłami i pochodniami, idą cię spalić!'",
+                            "Słyszysz okrzyki z zewnątrz. 'Znam bezpieczne miejsce, chodź ze mną!'"
+                        ]
+                        dialogue_choices = [
+                            ("Zaakceptuj pomoc Lusi (Teleport do Jądra Lasu)", "MOB_LUSIA_HELP"),
+                            ("Odrzuć pomoc i uciekaj do lasu oknem (Test Zręczności)", "MOB_ESCAPE_FOREST"),
+                            ("Biegnij z całych sił do Żuka! (Test Zręczności)", "MOB_ESCAPE_CAR")
+                        ]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "MOB_LUSIA_HELP":
+                        clues_found["wspolpraca_z_lusia"] = True
+                        dialogue_title = "Teleportacja"
+                        dialogue_lines = ["Lusia chwyta cię za ramię. Zanim drzwi wyważają chłopi z pochodniami, świat wiruje!"]
+                        dialogue_choices = [("Rozejrzyj się", "GO_TO_STRANGE_PLACE_FROM_MOB")]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "MOB_ESCAPE_FOREST":
+                        roll = random.randint(1, 6) + random.randint(1, 6)
+                        if roll >= 7:
+                            dialogue_title = "Zręczność: Sukces!"
+                            dialogue_lines = ["Wyskoczyłeś oknem na tyłach, zaledwie sekundy przed wdarciem się tłumu.", "Biegniesz prosto w najciemniejszy mrok lasu..."]
+                            dialogue_choices = [("Biegnij dalej", "MEET_DZIADEK_DIALOGUE")]
+                            current_choice_idx = 0
+                        else:
+                            end_message = "Wynik Zręczności: Porażka!\nPotknąłeś się o próg izby. Rozwścieczony tłum z Sołtysem na czele wyciągnął cię z chaty.\nZostałeś zlinczowany. (GAME OVER)"
+                            current_state = STATE_END
+                        continue
+
+                    elif c_code == "MOB_ESCAPE_CAR":
+                        roll = random.randint(1, 6) + random.randint(1, 6)
+                        if roll >= 8:
+                            end_message = "Wynik Zręczności: Ekstremalny Sukces!\nDopadasz Żuka, błyskawicznie zwierasz kable pod kierownicą i odjeżdżasz z piskiem opon.\nUdało ci się wrócić do Wrocławia i ocalić skórę. (ZAKOŃCZENIE: TCHÓRZLIWA UCIECZKA)"
+                            current_state = STATE_END
+                        else:
+                            end_message = "Wynik Zręczności: Porażka!\nStary silnik Żuka po prostu odmówił posłuszeństwa. Tłum rozbił szyby i...\nZostałeś zlinczowany we wrakach maszyny. (GAME OVER)"
+                            current_state = STATE_END
+                        continue
+
+                    elif c_code == "MEET_DZIADEK_DIALOGUE":
+                        dialogue_title = "Spotkanie w gąszczu"
+                        dialogue_lines = [
+                            "Wpadasz w gęstwinę i zderzasz się z potężną, drewnianą istotą.",
+                            "Leśny Dziadek obraca się gniewnie: 'Intruz! Kolejny człowiek! Kim jesteś?!'"
+                        ]
+                        dialogue_choices = [
+                            ("Jestem Drozd, człowiek z miasta! (Prawda)", "DZIADEK_TRUTH"),
+                            ("Jestem demonem-łowcą! (Kłamstwo - Test Charyzmy)", "DZIADEK_LIE")
+                        ]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "DZIADEK_TRUTH":
+                        end_message = "Leśny Dziadek ryczy obnażając kły.\nOplata cię grubymi pnączami i zgniata jak gałązkę. Umierasz. (GAME OVER)"
+                        current_state = STATE_END
+                        continue
+
+                    elif c_code == "DZIADEK_LIE":
+                        roll = random.randint(1, 6) + random.randint(1, 6)
+                        if roll >= 7:
+                            dialogue_title = "Charyzma: Sukces!"
+                            dialogue_lines = [
+                                "Leśny Dziadek łagodzi morderczy uścisk.",
+                                "'Wyczuwam w tobie krew Mamuny... Chodź ze mną w najgłębsze rejony puszczy.'"
+                            ]
+                            dialogue_choices = [("Podążaj za nim", "GO_TO_STRANGE_PLACE_FROM_MOB")]
+                            current_choice_idx = 0
+                        else:
+                            end_message = f"Wynik Charyzmy: {roll} (Porażka!).\nLeśny Dziadek: 'Łżesz jak pies! Pachniesz człowiekiem!'\nPnącza brutalnie łamią ci klatkę piersiową. (GAME OVER)"
+                            current_state = STATE_END
+                        continue
+
+                    elif c_code == "GO_TO_STRANGE_PLACE_FROM_MOB":
+                        current_map = "STRANGE_PLACE"
+                        current_state = STATE_EXPLORE
+                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
                         continue
                         
                     elif c_code == "SLEEP": 
@@ -874,16 +978,16 @@ while running:
                         
                     elif c_code == "SPARE_MAMUNA":
                         dialogue_title = "Pakt z Mamuną"
-                        dialogue_lines = ["Mamuna kiwa głową z wdzięcznością. 'Las gnije przez Leśnego Dziadka...", 
-                                          "Otworzę ci portal do Jądra Lasu. Powstrzymaj go.'"]
-                        dialogue_choices = [("Wejdź w mglisty portal", "GO_TO_STRANGE_PLACE")]
+                        dialogue_lines = ["Mamuna kiwa głową z wdzięcznością.", "'Dziękuję. Las ci tego nie zapomni.'"]
+                        dialogue_choices = [("Opuść leże w pokoju", "LEAVE_MAMUNA_PEACE")]
                         current_choice_idx = 0
                         for m in monster_triggers_forest:
                             if m["type"] == BOSS_MAMUNA: m["beaten"] = True
                         continue
 
-                    elif c_code == "GO_TO_STRANGE_PLACE":
-                        current_map = "STRANGE_PLACE"
+                    elif c_code == "LEAVE_MAMUNA_PEACE" or c_code == "RETURN_TO_VILLAGE":
+                        clues_found["mamuna_zalatwiona"] = True
+                        current_map = "VILLAGE"
                         current_state = STATE_EXPLORE
                         player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
                         continue
@@ -901,7 +1005,7 @@ while running:
                             ("Atakuj Dziadka kuszą z zaskoczenia! (Walka - Trudne)", "TREE_FIGHT_DZIADEK"),
                             ("Okłam ich: 'Urząd wycofał drwali!' (Test Charyzmy)", "TREE_LIE_1")
                         ]
-                        if clues_found.get("z_lusia", False):
+                        if clues_found.get("wspolpraca_z_lusia", False) or clues_found.get("z_lusia", False):
                             dialogue_choices.append(("Przekonaj Lusię by ich powstrzymała (+2 Charyzma)", "TREE_LUSIA"))
                         if clues_found.get("zardzewialy_sztylet", False):
                             dialogue_choices.append(("[PRZEDMIOT] Wbij Zardzewiały Sztylet w Drzewo!", "TREE_STAB"))
@@ -1057,7 +1161,7 @@ while running:
         elif current_map == "STRANGE_PLACE":
             screen.fill((15, 10, 20)) 
             draw_wielkie_drzewo(screen, WIDTH//2 - 60, HEIGHT//2 - 150)
-            if clues_found.get("z_lusia", False): draw_lusia(screen, WIDTH//2 + 80, HEIGHT//2 + 50)
+            if clues_found.get("wspolpraca_z_lusia", False) or clues_found.get("z_lusia", False): draw_lusia(screen, WIDTH//2 + 80, HEIGHT//2 + 50)
             draw_lesny_dziadek(screen, WIDTH//2 - 80, HEIGHT//2 + 50)
 
         if current_state in [STATE_EXPLORE, STATE_HOUSE]:
