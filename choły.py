@@ -167,13 +167,23 @@ BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
 # --- MROCZNY, ABSTRAKCYJNY SILNIK GRAFICZNY LOW-RES ---
 def draw_drozd(surface, x, y):
-    pygame.draw.rect(surface, C_DARK, (x - 2, y, 4, 6))      # Ciemne nogi/płaszcz
-    pygame.draw.rect(surface, C_RED, (x - 2, y - 4, 4, 4))   # Szkarłatny akcent
-    pygame.draw.rect(surface, C_LIGHT, (x - 1, y - 6, 2, 2)) # Beztwarzowa głowa
+    # Drozd - podróżnik w łachmanach
+    # Głowa z lekko opadającym kapturem
+    pygame.draw.circle(surface, C_LIGHT, (x, y), 6)
+    pygame.draw.polygon(surface, C_DARK, [(x-7, y-2), (x+7, y-2), (x, y-12)]) 
+    # Powiewający płaszcz (asymetria)
+    pygame.draw.line(surface, C_GRAY, (x, y+5), (x-10, y+25), 2)
+    pygame.draw.line(surface, C_DARK, (x, y+5), (x+5, y+20), 2)
+    # Detal: latarenka przy pasie (mała kropka światła)
+    pygame.draw.circle(surface, (200, 100, 0), (x+8, y+10), 2)
 
 def draw_lusia(surface, x, y):
-    pygame.draw.rect(surface, C_GRAY, (x - 2, y - 2, 4, 6)) 
-    pygame.draw.rect(surface, C_LIGHT, (x - 1, y - 4, 2, 2)) 
+    # Lusia - postać w za długiej sukni
+    pygame.draw.circle(surface, C_LIGHT, (x, y-10), 5)
+    # Trójkątna, ciężka suknia
+    pygame.draw.polygon(surface, C_DARK, [(x-10, y-5), (x+10, y-5), (x, y+20)])
+    # Wstążka we włosach (delikatny akcent czerwieni)
+    pygame.draw.circle(surface, C_RED, (x, y-14), 2) 
 
 # Portrety UI rysowane w wysokiej rozdzielczości na ekranie głównym
 def draw_soltys(surface, x, y):
@@ -355,10 +365,15 @@ def draw_true_krzykacz(surface, x, y, anim_tick):
     pygame.draw.line(surface, C_DARK, (x + 30, skull_y - 20), (x + 60, skull_y - 15), 2)
 
 def draw_lesny_dziadek(surface, x, y):
-    pygame.draw.rect(surface, C_DARK, (x - 10, y - 25, 20, 50)) 
-    pygame.draw.polygon(surface, C_BLACK, [(x-15, y+10), (x+15, y+10), (x, y-30)])
-    pygame.draw.circle(surface, C_RED, (x - 4, y - 10), 1)
-    pygame.draw.circle(surface, C_RED, (x + 4, y - 10), 1)
+    # Leśny Dziadek - postać zrośnięta z kosturem
+    # Zgarbiona sylwetka
+    pygame.draw.rect(surface, C_GRAY, (x-4, y-15, 8, 25))
+    # Wielka broda/chusta
+    pygame.draw.ellipse(surface, C_LIGHT, (x-6, y-10, 12, 10))
+    # Kostur, który wygląda jak część ręki
+    pygame.draw.line(surface, (60, 40, 20), (x+10, y-20), (x+10, y+15), 2)
+    # Kapelusz z szerokim rondem
+    pygame.draw.rect(surface, C_BLACK, (x-8, y-18, 16, 4))
 
 def draw_wielkie_drzewo(surface, x, y):
     pygame.draw.rect(surface, C_DARK, (x - 30, y, 60, 100))
