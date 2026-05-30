@@ -166,42 +166,95 @@ BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
 
 # --- MROCZNY, ABSTRAKCYJNY SILNIK GRAFICZNY LOW-RES ---
+# --- MROCZNY, ABSTRAKCYJNY SILNIK GRAFICZNY LOW-RES ---
+
+# --- Postacie w grze (Low-Res na mapie) ---
 def draw_drozd(surface, x, y):
-    # Drozd - podróżnik w łachmanach
-    # Głowa z lekko opadającym kapturem
-    pygame.draw.circle(surface, C_LIGHT, (x, y), 6)
-    pygame.draw.polygon(surface, C_DARK, [(x-7, y-2), (x+7, y-2), (x, y-12)]) 
-    # Powiewający płaszcz (asymetria)
-    pygame.draw.line(surface, C_GRAY, (x, y+5), (x-10, y+25), 2)
-    pygame.draw.line(surface, C_DARK, (x, y+5), (x+5, y+20), 2)
-    # Detal: latarenka przy pasie (mała kropka światła)
-    pygame.draw.circle(surface, (200, 100, 0), (x+8, y+10), 2)
+    # Asymetryczny, powiewający w jedną stronę płaszcz/cień
+    pygame.draw.rect(surface, C_DARK, (x - 3, y - 2, 5, 8))
+    pygame.draw.polygon(surface, C_BLACK, [(x - 3, y + 6), (x - 6, y + 12), (x + 2, y + 10)])
+    # Wyraźny garb / krzywe ramię
+    pygame.draw.rect(surface, C_BLACK, (x - 5, y - 1, 4, 4))
+    # Blada, niekształtna twarz pochylona w dół
+    pygame.draw.rect(surface, C_LIGHT, (x - 2, y - 6, 4, 4))
+    # Szkarłatny, pulsujący detal (krwawy szalik, lub obłęd)
+    pygame.draw.polygon(surface, C_RED, [(x - 3, y - 3), (x + 1, y - 2), (x - 1, y)])
+    # Pojedyncze, jarzące się oko
+    pygame.draw.circle(surface, C_RED, (x, y - 5), 1)
 
 def draw_lusia(surface, x, y):
-    # Lusia - postać w za długiej sukni
-    pygame.draw.circle(surface, C_LIGHT, (x, y-10), 5)
-    # Trójkątna, ciężka suknia
-    pygame.draw.polygon(surface, C_DARK, [(x-10, y-5), (x+10, y-5), (x, y+20)])
-    # Wstążka we włosach (delikatny akcent czerwieni)
-    pygame.draw.circle(surface, C_RED, (x, y-14), 2) 
+    # Zniekształcona, wychudzona sylwetka
+    pygame.draw.rect(surface, C_GRAY, (x - 2, y - 2, 3, 7))
+    # Nienaturalnie długa, złamana w łokciu ręka sięgająca ziemi
+    pygame.draw.line(surface, C_BLACK, (x - 2, y), (x - 5, y + 3), 1)
+    pygame.draw.line(surface, C_BLACK, (x - 5, y + 3), (x - 4, y + 8), 1)
+    # Rozczochrana, kanciasta głowa
+    pygame.draw.rect(surface, C_LIGHT, (x - 2, y - 5, 3, 3))
+    pygame.draw.polygon(surface, C_DARK, [(x - 4, y - 6), (x + 2, y - 5), (x - 1, y - 2)]) 
+    # Puste, przerażające spojrzenie
+    pygame.draw.circle(surface, C_BLACK, (x - 1, y - 4), 1)
 
-# Portrety UI rysowane w wysokiej rozdzielczości na ekranie głównym
+# --- Portrety UI w wysokiej rozdzielczości ---
 def draw_soltys(surface, x, y):
-    pygame.draw.rect(surface, C_DARK, (x - 12, y, 24, 25))
-    pygame.draw.rect(surface, C_LIGHT, (x - 8, y - 10, 16, 16))
-    pygame.draw.rect(surface, C_BLACK, (x - 15, y - 12, 30, 8)) # Kaszkiet
+    # Masywne, nierówne barki (postać ciężka, zapadnięta w sobie)
+    pygame.draw.polygon(surface, C_DARK, [(x - 18, y + 10), (x + 12, y + 5), (x + 15, y + 25), (x - 20, y + 25)])
+    # Nalana, zniekształcona i opadająca w dół twarz
+    pygame.draw.rect(surface, C_LIGHT, (x - 10, y - 8, 18, 18))
+    pygame.draw.polygon(surface, C_GRAY, [(x - 10, y + 5), (x - 12, y + 18), (x + 2, y + 10)]) # Zwisający podbródek
+    # Asymetryczny kaszkiet wbijający się w czoło
+    pygame.draw.polygon(surface, C_BLACK, [(x - 15, y - 10), (x + 12, y - 12), (x + 5, y - 5), (x - 18, y - 2)])
+    # Nierówne oczy: jedno wybałuszone i przekrwione, drugie przymknięte w mroku
+    pygame.draw.circle(surface, C_RED, (x - 4, y - 2), 2)
+    pygame.draw.line(surface, C_BLACK, (x + 4, y - 3), (x + 8, y - 1), 2)
+    # Bruzdy na twarzy
+    pygame.draw.line(surface, C_DARK, (x - 6, y + 4), (x + 6, y + 6), 2)
 
 def draw_zielarka(surface, x, y):
-    pygame.draw.polygon(surface, C_DARK, [(x, y - 15), (x - 18, y + 25), (x + 18, y + 25)])
-    pygame.draw.rect(surface, C_GRAY, (x - 6, y - 5, 12, 12))
+    # Ostry, poszarpany zarys zgarbionych pleców i łachmanów
+    pygame.draw.polygon(surface, C_DARK, [(x, y - 10), (x - 25, y + 25), (x + 15, y + 25)])
+    pygame.draw.polygon(surface, C_BLACK, [(x - 5, y), (x - 28, y + 20), (x - 10, y + 25)])
+    # Wychudzona twarz o zapadniętych policzkach
+    pygame.draw.polygon(surface, C_LIGHT, [(x - 8, y - 10), (x + 6, y - 12), (x, y + 5)])
+    # Chusta nachodząca głęboko, asymetrycznie na jedno oko
+    pygame.draw.polygon(surface, C_GRAY, [(x - 12, y - 15), (x + 10, y - 18), (x + 8, y - 6), (x - 14, y - 4)])
+    # Przerażający, czarny lub bielmem zaszły oczodół
+    pygame.draw.circle(surface, C_BLACK, (x - 3, y - 3), 3)
+    pygame.draw.circle(surface, C_LIGHT, (x - 3, y - 3), 1)
+    # Koścista dłoń kurczowo zaciskająca upiorny talizman przy piersi
+    pygame.draw.line(surface, C_LIGHT, (x + 5, y + 10), (x - 5, y + 18), 2)
+    pygame.draw.circle(surface, C_RED, (x - 5, y + 18), 3) 
 
 def draw_maciek(surface, x, y):
-    pygame.draw.rect(surface, C_DARK, (x - 10, y, 20, 25))
-    pygame.draw.rect(surface, C_LIGHT, (x - 6, y - 12, 12, 14))
+    # Złamana traumą sylwetka, nienaturalnie zgarbiona
+    pygame.draw.rect(surface, C_DARK, (x - 15, y + 5, 25, 20))
+    pygame.draw.polygon(surface, C_BLACK, [(x - 18, y + 10), (x - 8, y + 25), (x - 22, y + 25)])
+    # Twarz nienaturalnie wydłużona i przekrzywiona
+    pygame.draw.polygon(surface, C_LIGHT, [(x - 12, y - 8), (x, y - 15), (x + 5, y), (x - 8, y + 2)])
+    # Dłonie wczepione w czaszkę z dwóch różnych stron
+    pygame.draw.line(surface, C_GRAY, (x - 15, y + 15), (x - 10, y - 2), 3)
+    pygame.draw.line(surface, C_GRAY, (x + 10, y + 20), (x + 2, y + 5), 3)
+    # Puste oczodoły zlewające się w plamy ciemności
+    pygame.draw.rect(surface, C_BLACK, (x - 6, y - 6, 4, 3))
+    pygame.draw.rect(surface, C_BLACK, (x + 1, y - 8, 3, 2))
 
 def draw_maria(surface, x, y):
-    pygame.draw.polygon(surface, C_GRAY, [(x, y - 5), (x - 12, y + 25), (x + 12, y + 25)])
-    pygame.draw.rect(surface, C_LIGHT, (x - 5, y - 15, 10, 12))
+    # Prosta, sztywna bryła owinięta pasami (kaftan)
+    pygame.draw.polygon(surface, C_GRAY, [(x - 5, y), (x - 20, y + 25), (x + 15, y + 25)])
+    pygame.draw.line(surface, C_DARK, (x - 18, y + 15), (x + 12, y + 10), 3)
+    pygame.draw.line(surface, C_DARK, (x - 15, y + 22), (x + 10, y + 18), 3)
+    # Ekstremalnie ostra, wychudzona twarz w kształcie klina
+    pygame.draw.polygon(surface, C_LIGHT, [(x - 6, y - 18), (x + 8, y - 16), (x + 4, y + 2), (x - 4, y + 4)])
+    # Stojące naelektryzowane i połamane pasma siwych włosów
+    pygame.draw.line(surface, C_BLACK, (x - 6, y - 18), (x - 25, y - 5), 2)
+    pygame.draw.line(surface, C_BLACK, (x + 8, y - 16), (x + 15, y - 25), 2)
+    pygame.draw.line(surface, C_BLACK, (x - 8, y - 10), (x - 18, y + 5), 2)
+    # Asymetryczny obłęd – jedno oko patrzy w pustkę, drugie przeszywa gracza
+    pygame.draw.circle(surface, C_RED, (x - 2, y - 8), 2)
+    pygame.draw.circle(surface, C_BLACK, (x + 5, y - 10), 3)
+    pygame.draw.circle(surface, C_LIGHT, (x + 6, y - 10), 1)
+
+# Architektura jako ponure, ostre bryły
+# ... (reszta kodu bez zmian)
 
 # Architektura jako ponure, ostre bryły
 def draw_slavic_house(surface, x, y, width, height, roof_color=None, ruined=False):
