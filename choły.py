@@ -225,7 +225,7 @@ def get_soltys_dialogue():
     if clues_found["zardzewialy_sztylet"]:
         choices.insert(0, ("Znalazłem ten zardzewiały sztylet. Co to znaczy?", "SHOW_DAGGER"))
     
-    return ("Sołtys: Czego tu szukasz, miastowy? Wilki zjadły małego, to wielka tragedia.", choices)
+    return ("Sołtys: Aha, pan jest tym doktorem z miasta? Będzie pan ludzi leczył? \n Drozd: Jestem doktorem psychologii... \n Phiii? Myślałem, że chociaż lekarza nam przysłali, bo starego Fiodora wilki zjadły...", choices)
 
 def get_zielarka_dialogue():
     if clues_found["zaufanie_zielarki"]: 
@@ -327,8 +327,8 @@ for ty in range(0, HEIGHT, 50):
         pygame.draw.rect(terrain_surface, (int(base_g*0.85), base_g, int(base_g*0.65)), (tx, ty, 50, 50))
 
 intro_sequence = [
-    {"title": "Wnętrze Żuka. Siedzisz na śmierdzącej papierosami, wypierdzianym fotelu obok kierowcy, który wygląda, jak wyjęty żywcem z lat '50 partyzant Vietcongu.", "text": "Kierowca Władek: W Chołach zjedli dzieciaka... węszy tu zło."},
-    {"title": "Wioska Choły.", "text": "Porozmawiaj z ludźmi. Znajdź poszlaki, by popchnąć sprawę do przodu."}
+    {"title": "Wnętrze Żuka. Siedzisz na śmierdzącej papierosami, wypierdzianym fotelu obok kierowcy, który wygląda, jak wyjęty żywcem z lat '50 partyzant Vietcongu.", "text": "Kierowca Władek: W Chołach babka spaliła dzieciaka w piecu, chore, co się dzieje z tym światem. Maciej nadal rozpacza, a Marię zabrali do Choroszczy..."},
+    {"title": "Wioska Choły.", "text": "Porozmawiaj z ludźmi. Znajdź poszlaki. Rozwiąż sprawę."}
 ]
 intro_step = 0
 
