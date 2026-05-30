@@ -3,6 +3,7 @@ import sys
 import random
 import math
 import numpy as np
+import os
 
 # --- INICJALIZACJA DŹWIĘKU I PYGAME ---
 pygame.mixer.pre_init(44100, -16, 2, 1024)
@@ -14,6 +15,31 @@ WIDTH, HEIGHT = 950, 700
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Mroczna Baśń")
 clock = pygame.time.Clock()
+
+# --- SYSTEM ŁADOWANIA ZAAWANSOWANYCH GRAFIK (SPRITE'ÓW) ---
+# Gra spróbuje wczytać pliki .png z folderu 'assets'. 
+# Jeśli ich nie znajdzie, użyje rysowania proceduralnego.
+SPRITES = {}
+def load_sprite(key, filename, size=None):
+    if os.path.exists(filename):
+        try:
+            img = pygame.image.load(filename).convert_alpha()
+            if size:
+                img = pygame.transform.scale(img, size)
+            SPRITES[key] = img
+        except pygame.error:
+            pass
+
+load_sprite('drozd', 'assets/drozd.png', (34, 45))
+load_sprite('lusia', 'assets/lusia.png', (30, 40))
+load_sprite('soltys', 'assets/soltys.png', (40, 55))
+load_sprite('zielarka', 'assets/zielarka.png', (36, 45))
+load_sprite('maciek', 'assets/maciek.png', (34, 45))
+load_sprite('maria', 'assets/maria.png', (34, 45))
+load_sprite('latarnik', 'assets/latarnik.png', (60, 60))
+load_sprite('mamuna', 'assets/mamuna.png', (70, 70))
+load_sprite('drzewo', 'assets/drzewo.png', (40, 60))
+
 
 # --- PROCEDURALNY GENERATOR MUZYKI ---
 def generate_slavic_theme():
@@ -111,82 +137,118 @@ BOSS_SKRZEKACZ = "SKRZEKACZ (Demon)"
 BOSS_KRZYKACZ_FOREST = "MŁODY KRZYKACZ"
 BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
-# --- PROCEDURALNY SILNIK GRAFICZNY ---
+# --- HYBRYDOWY SILNIK GRAFICZNY (SPRITE + PROCEDURAL) ---
 def draw_drozd(surface, x, y):
-    pygame.draw.rect(surface, (20, 20, 20), (x + 6, y + 34, 6, 8))
-    pygame.draw.rect(surface, (20, 20, 20), (x + 18, y + 34, 6, 8))
-    pygame.draw.rect(surface, (45, 50, 65), (x + 2, y + 14, 26, 22))
-    pygame.draw.line(surface, (15, 15, 20), (x + 15, y + 14), (x + 15, y + 36), 2)
-    pygame.draw.circle(surface, (230, 190, 160), (x + 15, y + 10), 7)
-    pygame.draw.circle(surface, (10, 10, 15), (x + 12, y + 9), 1)
-    pygame.draw.circle(surface, (10, 10, 15), (x + 18, y + 9), 1)
-    pygame.draw.ellipse(surface, (25, 25, 30), (x - 2, y + 2, 34, 6))
-    pygame.draw.rect(surface, (25, 25, 30), (x + 6, y - 2, 18, 6))
+    if 'drozd' in SPRITES: surface.blit(SPRITES['drozd'], (x - 17, y - 22))
+    else:
+        pygame.draw.rect(surface, (20, 20, 20), (x + 6, y + 34, 6, 8))
+        pygame.draw.rect(surface, (20, 20, 20), (x + 18, y + 34, 6, 8))
+        pygame.draw.rect(surface, (45, 50, 65), (x + 2, y + 14, 26, 22))
+        pygame.draw.line(surface, (15, 15, 20), (x + 15, y + 14), (x + 15, y + 36), 2)
+        pygame.draw.circle(surface, (230, 190, 160), (x + 15, y + 10), 7)
+        pygame.draw.circle(surface, (10, 10, 15), (x + 12, y + 9), 1)
+        pygame.draw.circle(surface, (10, 10, 15), (x + 18, y + 9), 1)
+        pygame.draw.ellipse(surface, (25, 25, 30), (x - 2, y + 2, 34, 6))
+        pygame.draw.rect(surface, (25, 25, 30), (x + 6, y - 2, 18, 6))
 
 def draw_lusia(surface, x, y):
-    pygame.draw.polygon(surface, (15, 10, 10), [(x - 10, y + 10), (x + 10, y + 10), (x + 15, y + 30), (x - 15, y + 30)])
-    pygame.draw.rect(surface, (120, 30, 40), (x - 10, y + 14, 20, 26)) 
-    pygame.draw.circle(surface, (230, 190, 170), (x, y + 10), 8) 
-    pygame.draw.circle(surface, (255, 40, 40), (x - 3, y + 9), 2) 
-    pygame.draw.circle(surface, (255, 40, 40), (x + 3, y + 9), 2) 
+    if 'lusia' in SPRITES: surface.blit(SPRITES['lusia'], (x - 15, y - 20))
+    else:
+        pygame.draw.polygon(surface, (15, 10, 10), [(x - 10, y + 10), (x + 10, y + 10), (x + 15, y + 30), (x - 15, y + 30)])
+        pygame.draw.rect(surface, (120, 30, 40), (x - 10, y + 14, 20, 26)) 
+        pygame.draw.circle(surface, (230, 190, 170), (x, y + 10), 8) 
+        pygame.draw.circle(surface, (255, 40, 40), (x - 3, y + 9), 2) 
+        pygame.draw.circle(surface, (255, 40, 40), (x + 3, y + 9), 2) 
 
 def draw_soltys(surface, x, y):
-    pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
-    pygame.draw.circle(surface, (230, 190, 170), (x, y + 10), 10)
-    pygame.draw.rect(surface, (40, 30, 20), (x - 12, y + 40, 10, 15))
-    pygame.draw.rect(surface, (40, 30, 20), (x + 2, y + 40, 10, 15))
-    pygame.draw.polygon(surface, (30, 30, 30), [(x - 15, y + 3), (x + 15, y + 3), (x, y - 8)])
+    if 'soltys' in SPRITES: surface.blit(SPRITES['soltys'], (x - 20, y - 27))
+    else:
+        pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
+        pygame.draw.circle(surface, (230, 190, 170), (x, y + 10), 10)
+        pygame.draw.rect(surface, (40, 30, 20), (x - 12, y + 40, 10, 15))
+        pygame.draw.rect(surface, (40, 30, 20), (x + 2, y + 40, 10, 15))
+        pygame.draw.polygon(surface, (30, 30, 30), [(x - 15, y + 3), (x + 15, y + 3), (x, y - 8)])
 
 def draw_zielarka(surface, x, y):
-    pygame.draw.polygon(surface, (50, 70, 50), [(x, y - 5), (x - 18, y + 40), (x + 18, y + 40)])
-    pygame.draw.circle(surface, (200, 160, 140), (x, y + 5), 8)
-    pygame.draw.line(surface, (90, 60, 30), (x + 15, y + 10), (x + 15, y + 45), 3)
+    if 'zielarka' in SPRITES: surface.blit(SPRITES['zielarka'], (x - 18, y - 22))
+    else:
+        pygame.draw.polygon(surface, (50, 70, 50), [(x, y - 5), (x - 18, y + 40), (x + 18, y + 40)])
+        pygame.draw.circle(surface, (200, 160, 140), (x, y + 5), 8)
+        pygame.draw.line(surface, (90, 60, 30), (x + 15, y + 10), (x + 15, y + 45), 3)
 
 def draw_maciek(surface, x, y):
-    pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
-    pygame.draw.circle(surface, (230, 190, 160), (x, y + 10), 9)
-    pygame.draw.line(surface, (20, 10, 10), (x - 6, y + 6), (x - 2, y + 8), 2)
-    pygame.draw.line(surface, (20, 10, 10), (x + 6, y + 6), (x + 2, y + 8), 2)
-    pygame.draw.rect(surface, (40, 30, 20), (x - 5, y + 15, 10, 5))
+    if 'maciek' in SPRITES: surface.blit(SPRITES['maciek'], (x - 17, y - 22))
+    else:
+        pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
+        pygame.draw.circle(surface, (230, 190, 160), (x, y + 10), 9)
+        pygame.draw.line(surface, (20, 10, 10), (x - 6, y + 6), (x - 2, y + 8), 2)
+        pygame.draw.line(surface, (20, 10, 10), (x + 6, y + 6), (x + 2, y + 8), 2)
+        pygame.draw.rect(surface, (40, 30, 20), (x - 5, y + 15, 10, 5))
 
 def draw_maria(surface, x, y):
-    pygame.draw.polygon(surface, (100, 40, 40), [(x, y + 5), (x - 12, y + 35), (x + 12, y + 35)])
-    pygame.draw.circle(surface, (220, 180, 160), (x, y + 5), 8)
-    pygame.draw.arc(surface, (40, 20, 10), (x - 10, y - 5, 20, 20), 0, 3.14, 4)
+    if 'maria' in SPRITES: surface.blit(SPRITES['maria'], (x - 17, y - 22))
+    else:
+        pygame.draw.polygon(surface, (100, 40, 40), [(x, y + 5), (x - 12, y + 35), (x + 12, y + 35)])
+        pygame.draw.circle(surface, (220, 180, 160), (x, y + 5), 8)
+        pygame.draw.arc(surface, (40, 20, 10), (x - 10, y - 5, 20, 20), 0, 3.14, 4)
 
 def draw_slavic_house(surface, x, y, width, height, roof_color=(110, 90, 60), ruined=False):
+    # Szczegółowe rysowanie domów
     base_color = (85, 55, 35) if not ruined else (40, 35, 35)
     line_color = (50, 30, 15) if not ruined else (20, 20, 20)
+    
+    # Cień pod domem
+    pygame.draw.ellipse(surface, (10, 10, 10, 100), (x - 10, y + height - 20, width + 20, 30))
+    
     pygame.draw.rect(surface, base_color, (x, y + 30, width, height - 30))
     for i in range(y + 35, y + height, 12):
         pygame.draw.line(surface, line_color, (x, i), (x + width, i), 2)
+    
+    # Drzwi
     pygame.draw.rect(surface, (40, 25, 10) if not ruined else (15, 15, 15), (x + width//2 - 15, y + height - 40, 30, 40))
+    
     if not ruined:
-        pygame.draw.polygon(surface, roof_color, [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)])
+        pygame.draw.polygon(surface, roof_color, [(x - 10, y + 30), (x + width // 2, y - 15), (x + width + 10, y + 30)])
+        # Detale dachu (słoma/deski)
+        for i in range(x, x + width, 15):
+            pygame.draw.line(surface, (int(roof_color[0]*0.8), int(roof_color[1]*0.8), int(roof_color[2]*0.8)), (i, y + 25), (x + width // 2, y - 10), 2)
     else:
         pygame.draw.polygon(surface, (50, 45, 45), [(x - 10, y + 30), (x + width // 3, y + 5), (x + width + 10, y + 30)])
-    pygame.draw.polygon(surface, (60, 45, 30) if not ruined else (10, 10, 10), [(x - 10, y + 30), (x + width // 2, y - 10), (x + width + 10, y + 30)], 2)
+    pygame.draw.polygon(surface, (60, 45, 30) if not ruined else (10, 10, 10), [(x - 10, y + 30), (x + width // 2, y - 15), (x + width + 10, y + 30)], 3)
 
 def draw_tree(surface, x, y):
-    pygame.draw.rect(surface, (30, 20, 15), (x + 12, y + 24, 8, 16))
-    pygame.draw.circle(surface, (15, 35, 15), (x + 16, y + 16), 18)
-    pygame.draw.circle(surface, (20, 45, 20), (x + 12, y + 6), 14)
+    if 'drzewo' in SPRITES: 
+        surface.blit(SPRITES['drzewo'], (x - 20, y - 30))
+    else:
+        # Pieniek i korona z cieniami
+        pygame.draw.ellipse(surface, (10, 10, 10, 100), (x + 8, y + 35, 16, 8)) # Cień
+        pygame.draw.rect(surface, (40, 25, 15), (x + 12, y + 24, 8, 16))
+        pygame.draw.circle(surface, (15, 35, 15), (x + 16, y + 16), 20)
+        pygame.draw.circle(surface, (20, 45, 20), (x + 12, y + 6), 15)
+        pygame.draw.circle(surface, (25, 55, 25), (x + 18, y + 10), 10)
 
 def draw_well(surface, x, y):
+    pygame.draw.ellipse(surface, (10, 10, 10, 100), (x - 5, y + 20, 55, 25))
     pygame.draw.ellipse(surface, (80, 80, 85), (x, y + 18, 45, 25))
     pygame.draw.ellipse(surface, (40, 40, 45), (x + 4, y + 20, 37, 19))
-    pygame.draw.line(surface, (95, 65, 45), (x + 6, y + 20), (x + 6, y + 2), 3)
-    pygame.draw.line(surface, (95, 65, 45), (x + 39, y + 20), (x + 39, y + 2), 3)
-    pygame.draw.polygon(surface, (130, 65, 40), [(x - 4, y + 4), (x + 22, y - 12), (x + 49, y + 4)])
+    pygame.draw.line(surface, (95, 65, 45), (x + 6, y + 20), (x + 6, y + 2), 4)
+    pygame.draw.line(surface, (95, 65, 45), (x + 39, y + 20), (x + 39, y + 2), 4)
+    pygame.draw.polygon(surface, (130, 65, 40), [(x - 4, y + 4), (x + 22, y - 14), (x + 49, y + 4)])
+    # Lina w studni
+    pygame.draw.line(surface, (200, 180, 150), (x + 22, y - 4), (x + 22, y + 25), 2)
 
 def draw_monster_latarnik(surface, x, y, anim_tick):
-    offset_y = int(math.sin(anim_tick * 0.1) * 5)
-    pygame.draw.polygon(surface, (30, 40, 50), [(x, y+20+offset_y), (x+15, y-5+offset_y), (x+30, y+20+offset_y), (x+25, y+45+offset_y), (x+5, y+45+offset_y)])
-    pygame.draw.circle(surface, (210, 210, 190), (x + 15, y + offset_y), 8)
-    pygame.draw.circle(surface, (150, 0, 0), (x + 12, y - 1 + offset_y), 2)
-    pygame.draw.circle(surface, (150, 0, 0), (x + 18, y - 1 + offset_y), 2)
-    pygame.draw.rect(surface, (200, 150, 50), (x + 30, y + 30 + offset_y, 10, 15))
-    pygame.draw.circle(surface, (255, 255, 100), (x + 35, y + 37 + offset_y), 5)
+    if 'latarnik' in SPRITES:
+        offset_y = int(math.sin(anim_tick * 0.1) * 5)
+        surface.blit(SPRITES['latarnik'], (x - 30, y - 30 + offset_y))
+    else:
+        offset_y = int(math.sin(anim_tick * 0.1) * 5)
+        pygame.draw.polygon(surface, (30, 40, 50), [(x, y+20+offset_y), (x+15, y-5+offset_y), (x+30, y+20+offset_y), (x+25, y+45+offset_y), (x+5, y+45+offset_y)])
+        pygame.draw.circle(surface, (210, 210, 190), (x + 15, y + offset_y), 8)
+        pygame.draw.circle(surface, (150, 0, 0), (x + 12, y - 1 + offset_y), 2)
+        pygame.draw.circle(surface, (150, 0, 0), (x + 18, y - 1 + offset_y), 2)
+        pygame.draw.rect(surface, (200, 150, 50), (x + 30, y + 30 + offset_y, 10, 15))
+        pygame.draw.circle(surface, (255, 255, 100), (x + 35, y + 37 + offset_y), 5)
 
 def draw_monster_pien(surface, x, y):
     pygame.draw.rect(surface, (45, 35, 30), (x, y, 40, 50))
@@ -207,10 +269,14 @@ def draw_monster_skrzekacz(surface, x, y):
     pygame.draw.circle(surface, (0, 0, 0), (x+30, y+15), 2)
 
 def draw_monster_mamuna(surface, x, y, anim_tick):
-    offset_x = int(math.sin(anim_tick * 0.08) * 3)
-    pygame.draw.ellipse(surface, (20, 45, 25), (x - 5 + offset_x, y + 5, 40, 40))
-    pygame.draw.circle(surface, (100, 120, 80), (x + 15 + offset_x, y), 9)
-    pygame.draw.circle(surface, (255, 0, 0), (x + 15 + offset_x, y), 3)
+    if 'mamuna' in SPRITES:
+        offset_x = int(math.sin(anim_tick * 0.08) * 3)
+        surface.blit(SPRITES['mamuna'], (x - 35 + offset_x, y - 35))
+    else:
+        offset_x = int(math.sin(anim_tick * 0.08) * 3)
+        pygame.draw.ellipse(surface, (20, 45, 25), (x - 5 + offset_x, y + 5, 40, 40))
+        pygame.draw.circle(surface, (100, 120, 80), (x + 15 + offset_x, y), 9)
+        pygame.draw.circle(surface, (255, 0, 0), (x + 15 + offset_x, y), 3)
 
 def draw_true_krzykacz(surface, x, y, anim_tick):
     scale = 1.2 + math.sin(anim_tick * 0.1) * 0.05
@@ -317,11 +383,11 @@ class House:
         self.roof_color = roof_color
         self.ruined = ruined
 
-# --- NOWE STATYSTYKI GRACZA ---
+# --- STATYSTYKI GRACZA ---
 player_agility = 3    
 player_charisma = 2   
 
-# --- DANE FABULARNE Z NOWĄ ŚCIEŻKĄ ---
+# --- DANE FABULARNE ---
 clues_found = {
     "znaleziono_totem": False, 
     "zaufanie_soltysa": False, 
@@ -431,6 +497,34 @@ monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False} 
 ]
 
+# --- SZCZEGÓŁOWA MAPA TERENU (Zastępuje puste kwadraty) ---
+terrain_surface = pygame.Surface((WIDTH, HEIGHT))
+# Podłoże (gęstsza siatka dla lepszego detalu)
+for ty in range(0, HEIGHT, 20):
+    for tx in range(0, WIDTH, 20):
+        base_g = random.randint(30, 45)
+        pygame.draw.rect(terrain_surface, (int(base_g*0.7), base_g, int(base_g*0.5)), (tx, ty, 20, 20))
+        # Kępki trawy
+        if random.random() < 0.3:
+            for _ in range(2):
+                gx, gy = tx + random.randint(2, 18), ty + random.randint(2, 18)
+                pygame.draw.line(terrain_surface, (20, base_g+15, 20), (gx, gy), (gx + random.randint(-2, 2), gy - random.randint(3, 6)), 1)
+        # Małe kwiaty / kamienie
+        if random.random() < 0.05:
+            color = random.choice([(200, 200, 220), (100, 100, 120)])
+            pygame.draw.circle(terrain_surface, color, (tx + random.randint(5, 15), ty + random.randint(5, 15)), 1)
+
+# Wydeptane ścieżki (brud wokół domów i dróg)
+for h in houses:
+    path_rect = pygame.Rect(h.door_rect.x - 30, h.door_rect.y, 90, 120)
+    for _ in range(200):
+        px = path_rect.x + random.randint(0, path_rect.width)
+        py = path_rect.y + random.randint(0, path_rect.height)
+        if 0 <= px < WIDTH and 0 <= py < HEIGHT:
+            intensity = random.randint(40, 70)
+            pygame.draw.circle(terrain_surface, (intensity, intensity - 10, intensity - 25), (px, py), random.randint(1, 4))
+
+
 current_state = STATE_INTRO
 anim_tick = 0
 active_house = None 
@@ -469,12 +563,6 @@ runner_timer = 0
 font_main = pygame.font.SysFont("georgia", 20)
 font_sub = pygame.font.SysFont("arial", 15)
 font_title = pygame.font.SysFont("georgia", 24, bold=True)
-
-terrain_surface = pygame.Surface((WIDTH, HEIGHT))
-for ty in range(0, HEIGHT, 50):
-    for tx in range(0, WIDTH, 50):
-        base_g = random.randint(25, 38)
-        pygame.draw.rect(terrain_surface, (int(base_g*0.85), base_g, int(base_g*0.65)), (tx, ty, 50, 50))
 
 intro_sequence = [
     {"title": "Wnętrze Żuka. Siedzisz na śmierdzącym papierosami, wypierdzianym fotelu obok kierowcy, który wygląda, jak wyjęty żywcem z lat '50 partyzant Vietcongu.", "text": "Kierowca Władek: W Chołach babka spaliła dzieciaka w piecu, chore, co się dzieje z tym światem. Maciej nadal rozpacza, a Marię zabrali do Choroszczy..."},
