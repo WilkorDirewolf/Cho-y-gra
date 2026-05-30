@@ -5,7 +5,6 @@ import math
 import numpy as np
 
 # --- INICJALIZACJA DŹWIĘKU I PYGAME ---
-# Musimy wymusić parametry mixera przed init, aby pasowały do naszej tablicy numpy
 pygame.mixer.pre_init(44100, -16, 2, 1024)
 pygame.init()
 pygame.mixer.init()
@@ -16,37 +15,29 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Mroczna Baśń")
 clock = pygame.time.Clock()
 
-# --- PROCEDURALNY GENERATOR MUZYKI (Skoczny Słowiański Folk) ---
+# --- PROCEDURALNY GENERATOR MUZYKI ---
 def generate_slavic_theme():
     sample_rate = 44100
-    # Skala D-moll - idealna do szybkiej, heroicznej muzyki folkowej
     notes = {
         'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00,
         'A3': 220.00, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23,
         'rest': 0.0
     }
 
-    # Szybka, energiczna melodia w stylu wiedźmińskiej walki (rytmiczne szarpanie i uderzenia)
     melody = [
-        # Takt 1
         ('D4', 0.2), ('D4', 0.2), ('F4', 0.2), ('E4', 0.2), 
         ('D4', 0.2), ('C4', 0.2), ('A3', 0.4),
-        # Takt 2
         ('D4', 0.2), ('D4', 0.2), ('F4', 0.2), ('E4', 0.2), 
         ('G3', 0.2), ('A3', 0.2), ('D3', 0.4),
-        # Takt 3
         ('F4', 0.2), ('E4', 0.2), ('D4', 0.2), ('C4', 0.2), 
         ('D4', 0.1), ('E4', 0.1), ('F4', 0.2), ('A3', 0.4),
-        # Takt 4
         ('C4', 0.2), ('A3', 0.2), ('G3', 0.2), ('F3', 0.2), 
         ('E3', 0.2), ('C4', 0.2), ('D3', 0.4)
-    ]
-    
-    # Powtarzamy główny motyw dwukrotnie
-    melody = melody * 2
+    ] * 2
 
-    total_duration = sum(dur for _, dur in melody)
-    total_samples = int(sample_rate * total_duration)
+    # Naprawiony błąd NumPy z precyzją zmiennoprzecinkową
+    total_samples = sum(int(sample_rate * dur) for _, dur in melody)
+    total_duration = total_samples / sample_rate
     track = np.zeros(total_samples)
 
     current_sample = 0
@@ -55,22 +46,15 @@ def generate_slavic_theme():
         if note_name != 'rest':
             freq = notes[note_name]
             t = np.linspace(0, duration, samples, False)
+            wave = 0.5 * (2 * ((t * freq) - np.floor((t * freq) + 0.5)))
+            wave += 0.3 * np.sign(np.sin(2 * np.pi * freq * t)) 
             
-            # Instrument: Agresywne ludowe gęśle (połączenie fali piłokształtnej i kwadratowej)
-            wave = 0.5 * (2 * ((t * freq) - np.floor((t * freq) + 0.5))) # Piłokształtna
-            wave += 0.3 * np.sign(np.sin(2 * np.pi * freq * t)) # Kwadratowa
-            
-            # Obwiednia (ADSR) - ostre, mocne uderzenia smyczkiem i szybkie wytłumienie
             env = np.ones_like(t)
-            attack = int(sample_rate * 0.015)  # Bardzo szybki atak (szarpnięcie)
-            decay = int(sample_rate * 0.08)
-            release = int(sample_rate * 0.05)
+            attack, decay, release = int(sample_rate * 0.015), int(sample_rate * 0.08), int(sample_rate * 0.05)
             
             if samples > attack + release:
                 env[:attack] = np.linspace(0, 1, attack)
                 env[-release:] = np.linspace(1, 0, release)
-                
-                # Decay nadający ostry, perkusyjny charakter strunom
                 if samples > attack + decay + release:
                     env[attack:attack+decay] = np.linspace(1, 0.6, decay)
                     env[attack+decay:-release] = 0.6
@@ -79,11 +63,8 @@ def generate_slavic_theme():
 
         current_sample += samples
 
-    # Ścieżka perkusyjna: mocny słowiański bęben ("tupot")
     t_total = np.linspace(0, total_duration, total_samples, False)
     bass_track = np.zeros(total_samples)
-    
-    # Wybijamy beat co 0.4 sekundy (podkreśla energię melodii)
     beat_interval = 0.4
     num_beats = int(total_duration / beat_interval)
     
@@ -91,33 +72,22 @@ def generate_slavic_theme():
         beat_start = int(i * beat_interval * sample_rate)
         beat_end = int(beat_start + 0.15 * sample_rate)
         if beat_end < total_samples:
-            # Tworzymy symulację bębna poprzez szybki zjazd częstotliwości (kick drum)
             t_beat = t_total[beat_start:beat_end] - t_total[beat_start]
             kick_freq = np.linspace(150, 40, len(t_beat))
             kick = np.sin(2 * np.pi * kick_freq * t_beat)
-            
-            # Zanikający rezonans bębna
             kick_env = np.linspace(1, 0, len(t_beat)) ** 2
             bass_track[beat_start:beat_end] += kick * kick_env * 0.9
 
     track += bass_track
-
-    # Zabezpieczenie przed przesterowaniem (Clipping)
     track = np.clip(track, -1.0, 1.0)
-    
-    # Konwersja na 16-bitowe liczby całkowite
     track_16bit = np.int16(track * 32767)
-    
-    # Skopiowanie mono do kanałów stereo
-    stereo_track = np.column_stack((track_16bit, track_16bit))
-    return stereo_track
+    return np.column_stack((track_16bit, track_16bit))
 
-# Generowanie i uruchamianie muzyki w tle
 print("Generowanie skocznej, folkowej ścieżki dźwiękowej... (To może potrwać sekundę)")
 audio_data = generate_slavic_theme()
 slavic_sound = pygame.sndarray.make_sound(audio_data)
 slavic_sound.set_volume(0.25)
-slavic_sound.play(loops=-1, fade_ms=500) # Znacznie szybsze wjechanie muzyki
+slavic_sound.play(loops=-1, fade_ms=500)
 print("Zaczynamy słowiański rejwach!")
 
 # --- STANY GRY ---
@@ -134,7 +104,6 @@ STATE_END = "END"
 current_map = "VILLAGE" 
 end_message = ""
 
-# --- TYPY WALKI ---
 BOSS_MAMUNA = "MAMUNA (Pani Lasu)"
 BOSS_LATARNIK = "LATARNIK (Zwodzący Cień)"
 BOSS_PIEN = "PIEŃ (Zgniły Strażnik)"
@@ -162,7 +131,6 @@ def draw_lusia(surface, x, y):
     pygame.draw.circle(surface, (255, 40, 40), (x - 3, y + 9), 2) 
     pygame.draw.circle(surface, (255, 40, 40), (x + 3, y + 9), 2) 
 
-# --- AVATARY POSTACI W WIOSCE ---
 def draw_soltys(surface, x, y):
     pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
     pygame.draw.circle(surface, (230, 190, 170), (x, y + 10), 10)
@@ -175,10 +143,14 @@ def draw_zielarka(surface, x, y):
     pygame.draw.circle(surface, (200, 160, 140), (x, y + 5), 8)
     pygame.draw.line(surface, (90, 60, 30), (x + 15, y + 10), (x + 15, y + 45), 3)
 
-def draw_ksiadz(surface, x, y):
-    pygame.draw.rect(surface, (20, 20, 20), (x - 12, y + 15, 24, 35))
-    pygame.draw.circle(surface, (240, 200, 180), (x, y + 10), 9)
-    pygame.draw.rect(surface, (255, 255, 255), (x - 4, y + 15, 8, 3)) # koloratka
+def draw_maciek(surface, x, y):
+    pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
+    pygame.draw.circle(surface, (230, 190, 160), (x, y + 10), 9)
+    # Smutne brwi Maćka
+    pygame.draw.line(surface, (20, 10, 10), (x - 6, y + 6), (x - 2, y + 8), 2)
+    pygame.draw.line(surface, (20, 10, 10), (x + 6, y + 6), (x + 2, y + 8), 2)
+    # Zarost
+    pygame.draw.rect(surface, (40, 30, 20), (x - 5, y + 15, 10, 5))
 
 def draw_maria(surface, x, y):
     pygame.draw.polygon(surface, (100, 40, 40), [(x, y + 5), (x - 12, y + 35), (x + 12, y + 35)])
@@ -216,7 +188,6 @@ def draw_monster_latarnik(surface, x, y, anim_tick):
     pygame.draw.circle(surface, (210, 210, 190), (x + 15, y + offset_y), 8)
     pygame.draw.circle(surface, (150, 0, 0), (x + 12, y - 1 + offset_y), 2)
     pygame.draw.circle(surface, (150, 0, 0), (x + 18, y - 1 + offset_y), 2)
-    # Latarnia
     pygame.draw.rect(surface, (200, 150, 50), (x + 30, y + 30 + offset_y, 10, 15))
     pygame.draw.circle(surface, (255, 255, 100), (x + 35, y + 37 + offset_y), 5)
 
@@ -277,9 +248,10 @@ def draw_wielkie_drzewo(surface, x, y):
     pygame.draw.polygon(surface, (30, 20, 15), [(x + 60, y + 65), (x + 50, y + 90), (x + 70, y + 90)]) 
     pygame.draw.ellipse(surface, (25, 15, 10), (x + 40, y + 110, 40, 15)) 
 
-def draw_zuk(surface, x, y):
+def draw_zuk(surface, x, y, light=True):
     s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    pygame.draw.polygon(s, (255, 255, 150, 50), [(x+130, y+30), (x+450, y-20), (x+450, y+80)])
+    if light:
+        pygame.draw.polygon(s, (255, 255, 150, 50), [(x+130, y+30), (x+450, y-20), (x+450, y+80)])
     surface.blit(s, (0,0))
     pygame.draw.rect(surface, (80, 100, 110), (x, y, 140, 50), border_radius=8)
     pygame.draw.rect(surface, (70, 90, 100), (x, y, 80, 50)) 
@@ -294,7 +266,6 @@ def draw_zuk(surface, x, y):
     pygame.draw.circle(surface, (255, 255, 200), (x + 138, y + 30), 6)
     pygame.draw.rect(surface, (40, 40, 40), (x + 130, y + 40, 15, 8), border_radius=2)
 
-# --- FUNKCJA ZAWIJANIA TEKSTU ---
 def draw_text_wrapped(surface, text, font, color, x, y, max_width):
     paragraphs = text.split('\n')
     y_offset = 0
@@ -332,7 +303,7 @@ class Projectile:
 class RunnerObstacle:
     def __init__(self, x, y, width, height, type_id, speed):
         self.rect = pygame.Rect(x, y, width, height)
-        self.type = type_id # "LOG" lub "VINE"
+        self.type = type_id
         self.speed = speed
     def update(self):
         self.rect.x -= self.speed
@@ -349,13 +320,14 @@ class House:
         self.roof_color = roof_color
         self.ruined = ruined
 
-# --- DANE FABULARNE ---
+# --- DANE FABULARNE Z NOWĄ ŚCIEŻKĄ ---
 clues_found = {
     "znaleziono_totem": False, 
     "zaufanie_soltysa": False, 
     "zaufanie_zielarki": False, 
     "dowod_kosci": False,
-    "rozmowa_maria": False,
+    "ma_upowaznienie_maciek": False, # Nowa flaga - upoważnienie
+    "wiedza_o_mamunie": False,       # Nowa flaga - odblokowuje walkę
     "mamuna_rozmowa": False,
     "mamuna_zalatwiona": False,
     "ruiny_skarb": False,
@@ -403,16 +375,22 @@ def get_ruiny_dialogue():
     if clues_found["zaufanie_zielarki"] and not clues_found["dowod_kosci"]:
         return ("Rozgarniasz popiół w piecu. Znajdujesz zwęglone kości odmieńca...", 
                 [("Zabezpiecz dowód", "CLUE_KOSCI")])
-    elif clues_found["dowod_kosci"]: return ("Masz już dowód. Czas porozmawiać z księdzem.", [("Odejdź", "LEAVE")])
+    elif clues_found["dowod_kosci"]: return ("Masz już dowód. Czas pokazać go Maćkowi pod Plebanią.", [("Odejdź", "LEAVE")])
     return ("Osmalone ściany potęgują odór dawnego pożaru.", [("Odejdź", "LEAVE")])
 
-def get_ksiadz_dialogue():
-    if clues_found["rozmowa_maria"]:
-        return ("Maria: Mamuna uciekła do Lasu... Błagam cię, pomścij mnie.", 
-                [("Wyrusz z bronią do Głębokiego Lasu", "GO_TO_FOREST"), ("Daj mi chwilę", "LEAVE")])
+def get_plebania_dialogue():
+    if clues_found["ma_upowaznienie_maciek"]:
+        return ("Maciek: Błagam, jedź do Marii. Mój Żuk stoi na wschodnim skraju wsi.", [("Odejdź", "LEAVE")])
     if clues_found["dowod_kosci"]:
-        return ("Ksiądz: To prawda... Maria miała rację. Ukryłem ją u siebie.", [("Porozmawiaj z Marią", "TALK_MARIA")])
-    return ("Ksiądz: Zdobądź zaufanie wsi, wtedy porozmawiamy.", [("Wyjdź", "LEAVE")])
+        return ("Maciek: Te kości... Więc to prawda! To nie ona spaliła nasze dziecko!\nWeź to upoważnienie i jedź do niej do szpitala w Choroszczy.", [("Weź upoważnienie", "GET_UPOWAZNIENIE")])
+    return ("Przed plebanią siedzi Maciek.\nMaciek: Zostaw mnie... Moje dziecko nie żyje, a żonę zabrali do Choroszczy...", [("Wyjdź", "LEAVE")])
+
+def get_zuk_dialogue():
+    if clues_found["wiedza_o_mamunie"]:
+        return ("Żuk jest gotowy do drogi, ale najpierw musisz zabić Mamunę w Lesie.", [("Odejdź", "LEAVE")])
+    if clues_found["ma_upowaznienie_maciek"]:
+        return ("Masz dokumenty od Maćka. Wsiadasz do Żuka, żeby odwiedzić Marię.", [("Jedź do Choroszczy", "GO_CHOROSZCZ"), ("Jeszcze nie", "LEAVE")])
+    return ("Twój stary, wysłużony Żuk. Bez wyraźnego powodu nie ma sensu marnować paliwa.", [("Odejdź", "LEAVE")])
 
 def get_bed_dialogue():
     if clues_found.get("mamuna_zalatwiona", False):
@@ -424,14 +402,14 @@ houses = [
     House(140, 320, 130, 90, "Chata po starym Mikołaju", get_bed_dialogue),
     House(780, 80, 140, 100, "Namiot Starej Zielarki", get_zielarka_dialogue),
     House(720, 320, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, ruined=True),
-    House(60, 480, 150, 130, "Plebania", get_ksiadz_dialogue, roof_color=(120, 40, 30)),
-    House(420, 240, 80, 100, "Stara Kapliczka", get_kapliczka_dialogue, roof_color=(80, 80, 90))
+    House(60, 480, 150, 130, "Plebania (Maciek)", get_plebania_dialogue, roof_color=(120, 40, 30)),
+    House(420, 240, 80, 100, "Stara Kapliczka", get_kapliczka_dialogue, roof_color=(80, 80, 90)),
+    House(780, 480, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, roof_color=(80, 100, 110))
 ]
 
 decorations_trees = [(40, 260), (50, 500), (360, 180), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
 forest_trees = [(random.randint(-10, WIDTH-20), random.randint(-10, HEIGHT-20)) for _ in range(80)]
 
-# Przerobione rozmieszczenie NPC w lesie
 monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
@@ -441,7 +419,6 @@ monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False} 
 ]
 
-# Zmienne ogólne
 current_state = STATE_INTRO
 anim_tick = 0
 active_house = None 
@@ -454,7 +431,6 @@ active_boss_type = None
 boss_hp, boss_max_hp = 100, 100
 boss_mod_attack, boss_mod_stamina = 0, 0
 
-# Parametry mechaniki Latarnika
 latarnik_fatigue = 0
 latarnik_max_fatigue = 40
 latarnik_pos = pygame.Vector2(WIDTH//2, 200)
@@ -462,12 +438,10 @@ latarnik_pos = pygame.Vector2(WIDTH//2, 200)
 dialogue_title, dialogue_lines, dialogue_choices = "", [], []
 current_choice_idx = 0
 
-# Zmienne walki na arenie
 combat_projectiles, combat_bullets = [], []
 combat_timer = 0
 player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 100)
 
-# Zmienne Runnera (Ucieczki)
 runner_mode_vines = False
 runner_player_y = HEIGHT - 150
 runner_player_vy = 0
@@ -520,6 +494,7 @@ while running:
                     if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                         current_state = STATE_HOUSE
                         active_house = h
+                        # Lekkie dostosowanie pozycji, by gracz nie blokował się w drzwiach
                         player_pos = pygame.Vector2(WIDTH // 2, HEIGHT - 130)
                         break
             
@@ -528,15 +503,25 @@ while running:
                     if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
                         active_boss_type = m["type"]
                         
-                        if active_boss_type == BOSS_MAMUNA and not clues_found["mamuna_rozmowa"]:
-                            current_state = STATE_DIALOGUE
-                            dialogue_title = "Leże Mamuny - Konfrontacja"
-                            dialogue_lines = ["Mamuna gładzi ludzkie niemowlę...", "Zostaw nas w spokoju, a las nie skrzywdzi was więcej."]
-                            dialogue_choices = [("Oddaj dziecko i giń z moich rąk!", "FIGHT_MAMUNA"), ("Opuść broń. (Zostaw dziecko Mamunie)", "SPARE_MAMUNA")]
-                            current_choice_idx = 0
-                            clues_found["mamuna_rozmowa"] = True
-                            player_pos.y += 20 
-                            break
+                        if active_boss_type == BOSS_MAMUNA:
+                            if not clues_found["wiedza_o_mamunie"]:
+                                current_state = STATE_DIALOGUE
+                                dialogue_title = "Mgliste Mokradła"
+                                dialogue_lines = ["Z mgły wyłania się przerażający byt. Przeczuwasz, że bez odpowiedniej wiedzy ta walka to samobójstwo.", "Musisz dowiedzieć się, z czym mierzysz się naprawdę, zanim tu wrócisz!"]
+                                dialogue_choices = [("Uciekaj!", "LEAVE")]
+                                current_choice_idx = 0
+                                player_pos.y += 40
+                                break
+                            elif not clues_found["mamuna_rozmowa"]:
+                                current_state = STATE_DIALOGUE
+                                dialogue_title = "Leże Mamuny - Konfrontacja"
+                                dialogue_lines = ["Mamuna gładzi ludzkie niemowlę...", "Zostaw nas w spokoju, a las nie skrzywdzi was więcej."]
+                                dialogue_choices = [("Oddaj dziecko i giń z moich rąk!", "FIGHT_MAMUNA"), ("Opuść broń. (Zostaw dziecko Mamunie)", "SPARE_MAMUNA")]
+                                current_choice_idx = 0
+                                clues_found["mamuna_rozmowa"] = True
+                                player_pos.y += 20 
+                                break
+
                         elif active_boss_type == BOSS_LATARNIK and not clues_found["rozmowa_latarnik"]:
                             current_state = STATE_DIALOGUE
                             dialogue_title = "Spotkanie z Latarnikiem"
@@ -818,10 +803,37 @@ while running:
                     elif c_code == "CLUE_KOSCI": 
                         clues_found["dowod_kosci"] = True
                         dialogue_title = "Makabryczne Odkrycie"
-                        dialogue_lines = ["Zabezpieczasz nadpalone kości odmieńca. Ksiądz musi o tym wiedzieć!"]
+                        dialogue_lines = ["Zabezpieczasz nadpalone kości odmieńca. Pokaż to jako dowód Maćkowi."]
                         dialogue_choices = [("Schowaj do torby", "LEAVE")]
                         current_choice_idx = 0
                         continue
+
+                    # --- ZMIANY FABULARNE (MACIEK I CHOROSZCZ) ---
+                    elif c_code == "GET_UPOWAZNIENIE":
+                        clues_found["ma_upowaznienie_maciek"] = True
+                        dialogue_title = "Zdobyto dokument!"
+                        dialogue_lines = ["Otrzymałeś upoważnienie. Możesz teraz pojechać swoim Żukiem do Choroszczy."]
+                        dialogue_choices = [("Odejdź", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "GO_CHOROSZCZ":
+                        dialogue_title = "Szpital w Choroszczy"
+                        dialogue_lines = [
+                            "Pokazujesz upoważnienie od Maćka. Pielęgniarz wpuszcza cię na oddział zamknięty.",
+                            "Maria: 'To nie była zwykła choroba... To Mamuna! A to dziecko... to był Odmieniec.'",
+                            "Maria: 'Błagam, pomścij mnie. Mamuna tworzy iluzje – ignoruj je i celuj w jej prawdziwe ciało!'"
+                        ]
+                        dialogue_choices = [("Przyjmuję to zadanie. (Wróć do Chołów)", "RETURN_FROM_CHOROSZCZ")]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "RETURN_FROM_CHOROSZCZ":
+                        clues_found["wiedza_o_mamunie"] = True
+                        current_state = STATE_EXPLORE
+                        player_pos.y += 30
+                        continue
+                    # ----------------------------------------------
 
                     elif c_code == "TRIGGER_MOB_EVENT":
                         dialogue_title = "Środek Nocy - Bunt!"
@@ -913,14 +925,6 @@ while running:
                         dialogue_title = "Odpoczynek"
                         dialogue_lines = ["Przespałeś się na starym łóżku. Twoje rany się zagoiły."]
                         dialogue_choices = [("Wstań", "LEAVE")]
-                        current_choice_idx = 0
-                        continue
-                        
-                    elif c_code == "TALK_MARIA":
-                        clues_found["rozmowa_maria"] = True
-                        dialogue_title = "Rozmowa z Marią"
-                        t, c = get_ksiadz_dialogue()
-                        dialogue_lines, dialogue_choices = [t], c
                         current_choice_idx = 0
                         continue
                         
@@ -1136,7 +1140,7 @@ while running:
         
         zuk_x = -200 + (anim_tick * 2.5)
         if zuk_x > WIDTH // 2 - 100: zuk_x = WIDTH // 2 - 100
-        draw_zuk(screen, zuk_x, HEIGHT - 190)
+        draw_zuk(screen, zuk_x, HEIGHT - 190, light=True)
         
         bg_bar = pygame.Surface((WIDTH, 200), pygame.SRCALPHA)
         bg_bar.fill((0, 0, 0, 200))
@@ -1173,7 +1177,10 @@ while running:
                 for tx, ty in decorations_trees: draw_tree(screen, tx, ty)
                 draw_well(screen, 490, 420)
                 for h in houses:
-                    draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
+                    if h.name == "Wóz (Żuk)":
+                        draw_zuk(screen, h.rect.x, h.rect.y, light=False)
+                    else:
+                        draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
                 
                 if current_state == STATE_EXPLORE:
                     screen.blit(font_main.render(f"Sakiewka: {player_money} zł", True, (255, 215, 0)), (20, 20))
@@ -1206,11 +1213,10 @@ while running:
                 draw_soltys(screen, avatar_x, avatar_y)
             elif "Zielark" in dialogue_title:
                 draw_zielarka(screen, avatar_x, avatar_y)
-            elif "Plebania" in dialogue_title or "Ksiądz" in dialogue_title or "Marią" in dialogue_title or "Rozmowa z Marią" in dialogue_title:
-                if "Maria:" in combined_dialogue or "Marią" in dialogue_title or "Rozmowa z Marią" in dialogue_title:
-                    draw_maria(screen, avatar_x, avatar_y)
-                else:
-                    draw_ksiadz(screen, avatar_x, avatar_y)
+            elif "Plebania" in dialogue_title or "Maciek" in combined_dialogue:
+                draw_maciek(screen, avatar_x, avatar_y)
+            elif "Choroszcz" in dialogue_title or "Maria" in combined_dialogue:
+                draw_maria(screen, avatar_x, avatar_y)
             
             current_y = HEIGHT - 230
             current_y += draw_text_wrapped(screen, dialogue_title, font_title, (200, 180, 150), 140, current_y, WIDTH - 200) + 10
