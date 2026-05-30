@@ -55,6 +55,29 @@ def draw_lusia(surface, x, y):
     pygame.draw.circle(surface, (255, 40, 40), (x - 3, y + 9), 2) 
     pygame.draw.circle(surface, (255, 40, 40), (x + 3, y + 9), 2) 
 
+# --- AVATARY POSTACI W WIOSCE ---
+def draw_soltys(surface, x, y):
+    pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
+    pygame.draw.circle(surface, (230, 190, 170), (x, y + 10), 10)
+    pygame.draw.rect(surface, (40, 30, 20), (x - 12, y + 40, 10, 15))
+    pygame.draw.rect(surface, (40, 30, 20), (x + 2, y + 40, 10, 15))
+    pygame.draw.polygon(surface, (30, 30, 30), [(x - 15, y + 3), (x + 15, y + 3), (x, y - 8)])
+
+def draw_zielarka(surface, x, y):
+    pygame.draw.polygon(surface, (50, 70, 50), [(x, y - 5), (x - 18, y + 40), (x + 18, y + 40)])
+    pygame.draw.circle(surface, (200, 160, 140), (x, y + 5), 8)
+    pygame.draw.line(surface, (90, 60, 30), (x + 15, y + 10), (x + 15, y + 45), 3)
+
+def draw_ksiadz(surface, x, y):
+    pygame.draw.rect(surface, (20, 20, 20), (x - 12, y + 15, 24, 35))
+    pygame.draw.circle(surface, (240, 200, 180), (x, y + 10), 9)
+    pygame.draw.rect(surface, (255, 255, 255), (x - 4, y + 15, 8, 3)) # koloratka
+
+def draw_maria(surface, x, y):
+    pygame.draw.polygon(surface, (100, 40, 40), [(x, y + 5), (x - 12, y + 35), (x + 12, y + 35)])
+    pygame.draw.circle(surface, (220, 180, 160), (x, y + 5), 8)
+    pygame.draw.arc(surface, (40, 20, 10), (x - 10, y - 5, 20, 20), 0, 3.14, 4)
+
 def draw_slavic_house(surface, x, y, width, height, roof_color=(110, 90, 60), ruined=False):
     base_color = (85, 55, 35) if not ruined else (40, 35, 35)
     line_color = (50, 30, 15) if not ruined else (20, 20, 20)
@@ -299,9 +322,9 @@ monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ_FOREST, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_MAMUNA, "beaten": False},
+    {"rect": pygame.Rect(WIDTH//2 - 30, HEIGHT//2 + 100, 60, 60), "type": BOSS_MAMUNA, "beaten": False}, # Mamuna przestawiona na główną ścieżkę
     {"rect": pygame.Rect(WIDTH//2 - 50, HEIGHT//2 - 250, 60, 60), "type": BOSS_GAWRON, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 - 50, HEIGHT//2 + 200, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False}
+    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False} # Skrzekacz przesunięty na prawo
 ]
 
 # Zmienne ogólne
@@ -602,7 +625,7 @@ while running:
                 if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     current_map = "FOREST"
                     current_state = STATE_EXPLORE
-                    player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 100)
+                    player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 30)
 
             elif current_state == STATE_RUNNER:
                 if event.key in [pygame.K_e, pygame.K_RETURN] and runner_timer % 15 != 0:
@@ -979,21 +1002,33 @@ while running:
             draw_drozd(screen, int(player_pos.x), int(player_pos.y))
 
         if current_state == STATE_DIALOGUE:
-            # Zwiększono obszar ramki dla dialogów
             pygame.draw.rect(screen, (20, 20, 25), (40, HEIGHT - 250, WIDTH - 80, 230), border_radius=10)
             pygame.draw.rect(screen, (150, 140, 120), (40, HEIGHT - 250, WIDTH - 80, 230), 2, border_radius=10)
             
-            # Dynamiczne ustalanie pozycji i renderowanie zawijanego tekstu
-            current_y = HEIGHT - 230
-            current_y += draw_text_wrapped(screen, dialogue_title, font_title, (200, 180, 150), 60, current_y, WIDTH - 120) + 10
-            
             combined_dialogue = " ".join(dialogue_lines)
-            current_y += draw_text_wrapped(screen, combined_dialogue, font_main, (220, 220, 220), 60, current_y, WIDTH - 120) + 15
+
+            # Rysowanie avatara
+            avatar_x, avatar_y = 90, HEIGHT - 210
+            if "Sołtys" in dialogue_title:
+                draw_soltys(screen, avatar_x, avatar_y)
+            elif "Zielark" in dialogue_title:
+                draw_zielarka(screen, avatar_x, avatar_y)
+            elif "Plebania" in dialogue_title or "Ksiądz" in dialogue_title or "Marią" in dialogue_title or "Rozmowa z Marią" in dialogue_title:
+                if "Maria:" in combined_dialogue or "Marią" in dialogue_title or "Rozmowa z Marią" in dialogue_title:
+                    draw_maria(screen, avatar_x, avatar_y)
+                else:
+                    draw_ksiadz(screen, avatar_x, avatar_y)
+            
+            # Dynamiczne ustalanie pozycji i renderowanie zawijanego tekstu (przesunięto x na 140)
+            current_y = HEIGHT - 230
+            current_y += draw_text_wrapped(screen, dialogue_title, font_title, (200, 180, 150), 140, current_y, WIDTH - 200) + 10
+            
+            current_y += draw_text_wrapped(screen, combined_dialogue, font_main, (220, 220, 220), 140, current_y, WIDTH - 200) + 15
             
             for idx, choice in enumerate(dialogue_choices):
                 color = (255, 200, 50) if idx == current_choice_idx else (150, 150, 150)
                 choice_text = f"> {choice[0]}"
-                current_y += draw_text_wrapped(screen, choice_text, font_main, color, 60, current_y, WIDTH - 120) + 5
+                current_y += draw_text_wrapped(screen, choice_text, font_main, color, 140, current_y, WIDTH - 200) + 5
 
     elif current_state == STATE_COMBAT:
         screen.fill((15, 10, 10))
