@@ -299,25 +299,41 @@ def draw_well(surface, x, y):
     pygame.draw.polygon(surface, C_DARK, [(x - w//2 - 4, y - S(35)), (x, y - S(45)), (x + w//2 + 4, y - S(35))])
     pygame.draw.polygon(surface, C_BLACK, [(x - w//2 - 4, y - S(35)), (x, y - S(45)), (x + w//2 + 4, y - S(35))], 1)
 
-def draw_zuk(surface, x, y, light=True):
-    w, h = S(50), S(30)
-    body_poly = [(x - w//2, y), (x + w//2, y), (x + w//2, y + h//2), (x - w//2, y + h//2)]
-    pygame.draw.polygon(surface, C_BROWN, body_poly)
-    pygame.draw.rect(surface, C_VOID, (x - w//2, y, w, h//2), 2) 
-    kabin_poly = [(x - w//4, y), (x - w//4 + S(5), y - S(15)), (x + w//2 - S(5), y - S(15)), (x + w//2, y)]
-    pygame.draw.polygon(surface, C_BROWN, kabin_poly)
-    pygame.draw.polygon(surface, C_VOID, kabin_poly, 2)
-    pygame.draw.circle(surface, C_BLACK, (x - w//2 + S(10), y + h//2), S(7))
-    pygame.draw.circle(surface, C_GRAY, (x - w//2 + S(10), y + h//2), S(3)) 
-    pygame.draw.circle(surface, C_BLACK, (x + w//2 - S(10), y + h//2), S(7))
-    pygame.draw.circle(surface, C_GRAY, (x + w//2 - S(10), y + h//2), S(3))
-    pygame.draw.polygon(surface, C_VOID, [(x - w//4 + S(7), y - S(2)), (x - w//4 + S(10), y - S(12)), (x + w//4, y - S(12)), (x + w//4, y - S(2))])
+def draw_zuk(surface, x, y, light=False):
+    # Kolory
+    C_KAROSERIA = (90, 105, 115) # Wyblakły, smętny niebieski/szary
+    C_PLANDEKA = (130, 130, 125) # Brudny, płócienny szary
+    C_OPONY = (20, 20, 20)
+    C_SZYBY = (15, 20, 25) # Nienaturalnie ciemne szyby
+    
+    # Paka z plandeką (tył)
+    pygame.draw.rect(surface, C_PLANDEKA, (x - 70, y - 65, 85, 35))
+    pygame.draw.rect(surface, C_KAROSERIA, (x - 70, y - 30, 85, 20))
+    
+    # Kabina (środek)
+    pygame.draw.rect(surface, C_KAROSERIA, (x + 15, y - 55, 35, 45))
+    # Szyba boczna
+    pygame.draw.polygon(surface, C_SZYBY, [(x + 20, y - 50), (x + 45, y - 50), (x + 45, y - 35), (x + 20, y - 35)])
+    
+    # Maska (charakterystyczny nos Żuka)
+    pygame.draw.polygon(surface, C_KAROSERIA, [(x + 50, y - 35), (x + 70, y - 25), (x + 70, y - 10), (x + 50, y - 10)])
+    # Zderzak
+    pygame.draw.rect(surface, (50, 50, 50), (x + 65, y - 12, 10, 6))
+
+    # Koła z kołpakami
+    pygame.draw.circle(surface, C_OPONY, (x - 40, y - 5), 14)
+    pygame.draw.circle(surface, C_OPONY, (x + 35, y - 5), 14)
+    pygame.draw.circle(surface, (100, 100, 100), (x - 40, y - 5), 6) # Felga tył
+    pygame.draw.circle(surface, (100, 100, 100), (x + 35, y - 5), 6) # Felga przód
+
+    # Reflektory i światło
+    pygame.draw.ellipse(surface, (200, 200, 200) if not light else (255, 255, 180), (x + 66, y - 24, 6, 10))
+    
     if light:
-        pygame.draw.circle(surface, C_LIGHT, (x + w//2, y + S(5)), S(4))
-        light_pos = (S((x + w//2) * SCALE_F), S((y + S(5)) * SCALE_F))
-        pygame.draw.circle(fx_surface, (210, 210, 200, 100), light_pos, S(60))
-    else:
-        pygame.draw.circle(surface, C_GRAY, (x + w//2, y + S(5)), S(4))
+        # Półprzezroczysty snop światła w mgle
+        light_surf = pygame.Surface((250, 100), pygame.SRCALPHA)
+        pygame.draw.polygon(light_surf, (255, 255, 150, 40), [(0, 30), (250, 0), (250, 100)])
+        surface.blit(light_surf, (x + 70, y - 54))
 
 # --- POTWORY ---
 def draw_monster_latarnik(surface, x, y, anim_tick):
