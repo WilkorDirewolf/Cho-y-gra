@@ -147,6 +147,23 @@ def draw_wielkie_drzewo(surface, x, y):
     pygame.draw.polygon(surface, (30, 20, 15), [(x + 60, y + 65), (x + 50, y + 90), (x + 70, y + 90)]) 
     pygame.draw.ellipse(surface, (25, 15, 10), (x + 40, y + 110, 40, 15)) 
 
+def draw_zuk(surface, x, y):
+    s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    pygame.draw.polygon(s, (255, 255, 150, 50), [(x+130, y+30), (x+450, y-20), (x+450, y+80)])
+    surface.blit(s, (0,0))
+    pygame.draw.rect(surface, (80, 100, 110), (x, y, 140, 50), border_radius=8)
+    pygame.draw.rect(surface, (70, 90, 100), (x, y, 80, 50)) 
+    for i in range(int(x)+5, int(x)+80, 10):
+        pygame.draw.line(surface, (60, 80, 90), (i, y+5), (i, y+45), 2)
+    pygame.draw.rect(surface, (30, 40, 50), (x + 95, y + 8, 30, 18), border_radius=3)
+    pygame.draw.rect(surface, (30, 40, 50), (x + 70, y + 8, 20, 18), border_radius=2)
+    pygame.draw.circle(surface, (20, 20, 20), (x + 30, y + 50), 16)
+    pygame.draw.circle(surface, (120, 120, 120), (x + 30, y + 50), 6)
+    pygame.draw.circle(surface, (20, 20, 20), (x + 110, y + 50), 16)
+    pygame.draw.circle(surface, (120, 120, 120), (x + 110, y + 50), 6)
+    pygame.draw.circle(surface, (255, 255, 200), (x + 138, y + 30), 6)
+    pygame.draw.rect(surface, (40, 40, 40), (x + 130, y + 40, 15, 8), border_radius=2)
+
 class Projectile:
     def __init__(self, x, y, vx, vy, color, radius=5):
         self.x, self.y, self.vx, self.vy, self.color, self.radius = x, y, vx, vy, color, radius
@@ -484,6 +501,14 @@ while running:
             if active_boss_type == BOSS_TRUE_KRZYKACZ:
                 end_message = "Zabiłeś Krzykacza. Prastara obrona lasu padła...\nDrwale z urzędu wkrótce zetną wszystko. Las umrze, ale Choły są bezpieczne."
                 current_state = STATE_END
+            elif active_boss_type == BOSS_MAMUNA:
+                for m in monster_triggers_forest:
+                    if m["type"] == active_boss_type: m["beaten"] = True
+                current_map = "STRANGE_PLACE"
+                current_state = STATE_EXPLORE
+                player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
+                combat_projectiles.clear()
+                combat_bullets.clear()
             else:
                 for m in monster_triggers_forest:
                     if m["type"] == active_boss_type: m["beaten"] = True
@@ -723,6 +748,32 @@ while running:
                         combat_projectiles.clear()
                         continue
 
+                    # DECYZJE Z MAMUNĄ I PRZEJŚCIE DO JĄDRA LASU
+                    elif c_code == "FIGHT_MAMUNA":
+                        current_state = STATE_COMBAT
+                        active_boss_type = BOSS_MAMUNA
+                        boss_hp = boss_max_hp = 180
+                        boss_mod_attack = 2
+                        combat_timer = 0
+                        combat_projectiles.clear()
+                        continue
+                        
+                    elif c_code == "SPARE_MAMUNA":
+                        dialogue_title = "Pakt z Mamuną"
+                        dialogue_lines = ["Mamuna kiwa głową z wdzięcznością. 'Las gnije przez Leśnego Dziadka...", 
+                                          "Otworzę ci portal do Jądra Lasu. Powstrzymaj go.'"]
+                        dialogue_choices = [("Wejdź w mglisty portal", "GO_TO_STRANGE_PLACE")]
+                        current_choice_idx = 0
+                        for m in monster_triggers_forest:
+                            if m["type"] == BOSS_MAMUNA: m["beaten"] = True
+                        continue
+
+                    elif c_code == "GO_TO_STRANGE_PLACE":
+                        current_map = "STRANGE_PLACE"
+                        current_state = STATE_EXPLORE
+                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
+                        continue
+
                     # LOGIKA JĄDRA LASU (Wywód Drzewa, Drwale i Krzykacz)
                     elif c_code == "TALK_TO_TREE":
                         dialogue_title = "Rozmowa z Duchem Lasu"
@@ -833,9 +884,21 @@ while running:
 
     # 3. RENDEROWANIE
     if current_state == STATE_INTRO:
-        screen.fill((12, 15, 12))
-        screen.blit(font_title.render(intro_sequence[intro_step]["title"], True, (180, 200, 180)), (80, HEIGHT - 180))
-        screen.blit(font_main.render(intro_sequence[intro_step]["text"], True, (240, 240, 220)), (80, HEIGHT - 130))
+        screen.fill((10, 12, 15)) 
+        for i in range(12): draw_tree(screen, 30 + i*80, HEIGHT - 300)
+        pygame.draw.rect(screen, (25, 25, 30), (0, HEIGHT - 150, WIDTH, 150))
+        
+        zuk_x = -200 + (anim_tick * 2.5)
+        if zuk_x > WIDTH // 2 - 100: zuk_x = WIDTH // 2 - 100
+        draw_zuk(screen, zuk_x, HEIGHT - 190)
+        
+        bg_bar = pygame.Surface((WIDTH, 200), pygame.SRCALPHA)
+        bg_bar.fill((0, 0, 0, 200))
+        screen.blit(bg_bar, (0, HEIGHT - 200))
+        
+        screen.blit(font_title.render(intro_sequence[intro_step]["title"], True, (180, 200, 180)), (80, HEIGHT - 170))
+        screen.blit(font_main.render(intro_sequence[intro_step]["text"], True, (240, 240, 220)), (80, HEIGHT - 120))
+        screen.blit(font_sub.render("[Spacja / Enter by kontynuować]", True, (120, 120, 120)), (WIDTH - 280, HEIGHT - 40))
             
     elif current_state == STATE_TRANSITION:
         screen.fill((10, 15, 12))
@@ -844,18 +907,13 @@ while running:
     elif current_state in [STATE_EXPLORE, STATE_HOUSE, STATE_DIALOGUE, STATE_DICE_ROLL]:
         if current_map == "VILLAGE":
             if current_state == STATE_HOUSE or (current_state == STATE_DIALOGUE and active_house is not None):
-                # Tło wnętrza
                 screen.fill((10, 10, 12))
-                
-                # Podłoga i ściany
                 pygame.draw.rect(screen, (50, 40, 30), (50, 50, WIDTH - 100, HEIGHT - 100))
                 pygame.draw.rect(screen, (30, 20, 15), (50, 50, WIDTH - 100, HEIGHT - 100), 10)
                 
-                # Środek pokoju z "dywanem" pokazujący graczowi dokąd iść (triggeruje dialog)
                 pygame.draw.circle(screen, (80, 40, 30), (WIDTH//2, HEIGHT//2), 65) 
-                pygame.draw.circle(screen, (200, 180, 150), (WIDTH//2, HEIGHT//2), 20) # Ikonka NPC
+                pygame.draw.circle(screen, (200, 180, 150), (WIDTH//2, HEIGHT//2), 20)
                 
-                # Wyświetlanie UI domku
                 house_name = active_house.name if active_house else "Wnętrze"
                 screen.blit(font_title.render("Wnętrze: " + house_name, True, (220, 200, 150)), (70, 70))
                 screen.blit(font_sub.render("Podejdź na środek, aby porozmawiać. Przejdź za krawędź ekranu, by wyjść.", True, (150, 150, 150)), (70, 110))
@@ -866,7 +924,6 @@ while running:
                 for h in houses:
                     draw_slavic_house(screen, h.rect.x, h.rect.y, h.rect.width, h.rect.height, h.roof_color, h.ruined)
                 
-                # HUD (Złoto i HP) Drozda na zewnątrz w wiosce
                 if current_state == STATE_EXPLORE:
                     screen.blit(font_main.render(f"Sakiewka: {player_money} zł", True, (255, 215, 0)), (20, 20))
                     pygame.draw.rect(screen, (50, 0, 0), (20, 50, 150, 15))
@@ -906,7 +963,6 @@ while running:
         pygame.draw.rect(screen, (0, 0, 50), (20, HEIGHT - 40, 200, 20))
         pygame.draw.rect(screen, (0, 100, 255), (20, HEIGHT - 40, 200 * (player_hp / player_max_hp), 20))
         
-        # Wyrysowanie specyficznego bossa
         if active_boss_type == BOSS_TRUE_KRZYKACZ: 
             draw_true_krzykacz(screen, WIDTH//2, 220, anim_tick)
         elif active_boss_type == BOSS_LATARNIK:
@@ -917,6 +973,8 @@ while running:
             draw_monster_gawron(screen, WIDTH//2 - 15, 200)
         elif active_boss_type == BOSS_SKRZEKACZ:
             draw_monster_skrzekacz(screen, WIDTH//2 - 20, 200)
+        elif active_boss_type == BOSS_MAMUNA:
+            draw_monster_mamuna(screen, WIDTH//2 - 20, 200, anim_tick)
 
         draw_drozd(screen, int(player_combat_pos.x), int(player_combat_pos.y))
         for p in combat_projectiles: p.draw(screen)
@@ -926,7 +984,6 @@ while running:
         screen.fill((15, 25, 15))
         pygame.draw.line(screen, (80, 60, 40), (0, runner_ground_y + 40), (WIDTH, runner_ground_y + 40), 10)
         
-        # UI
         pygame.draw.rect(screen, (0, 0, 50), (20, 20, 200, 20))
         pygame.draw.rect(screen, (0, 100, 255), (20, 20, 200 * (player_hp / player_max_hp), 20))
         screen.blit(font_sub.render("HP Drozda", True, (255,255,255)), (25, 22))
@@ -937,7 +994,6 @@ while running:
 
         screen.blit(font_main.render("[SPACE] - Skok  |  [E] - Strzał do tyłu", True, (150, 150, 150)), (WIDTH//2 - 150, 60))
 
-        # Rysowanie jednostek
         draw_drozd(screen, 400, int(runner_player_y))
         draw_lesny_dziadek(screen, 100, runner_ground_y + int(math.sin(runner_timer*0.2)*5))
         
