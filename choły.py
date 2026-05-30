@@ -35,7 +35,6 @@ def generate_slavic_theme():
         ('E3', 0.2), ('C4', 0.2), ('D3', 0.4)
     ] * 2
 
-    # Naprawiony błąd NumPy z precyzją zmiennoprzecinkową
     total_samples = sum(int(sample_rate * dur) for _, dur in melody)
     total_duration = total_samples / sample_rate
     track = np.zeros(total_samples)
@@ -146,10 +145,8 @@ def draw_zielarka(surface, x, y):
 def draw_maciek(surface, x, y):
     pygame.draw.rect(surface, (60, 50, 40), (x - 12, y + 15, 24, 25))
     pygame.draw.circle(surface, (230, 190, 160), (x, y + 10), 9)
-    # Smutne brwi Maćka
     pygame.draw.line(surface, (20, 10, 10), (x - 6, y + 6), (x - 2, y + 8), 2)
     pygame.draw.line(surface, (20, 10, 10), (x + 6, y + 6), (x + 2, y + 8), 2)
-    # Zarost
     pygame.draw.rect(surface, (40, 30, 20), (x - 5, y + 15, 10, 5))
 
 def draw_maria(surface, x, y):
@@ -320,14 +317,18 @@ class House:
         self.roof_color = roof_color
         self.ruined = ruined
 
+# --- NOWE STATYSTYKI GRACZA ---
+player_agility = 3    
+player_charisma = 2   
+
 # --- DANE FABULARNE Z NOWĄ ŚCIEŻKĄ ---
 clues_found = {
     "znaleziono_totem": False, 
     "zaufanie_soltysa": False, 
     "zaufanie_zielarki": False, 
     "dowod_kosci": False,
-    "ma_upowaznienie_maciek": False, # Nowa flaga - upoważnienie
-    "wiedza_o_mamunie": False,       # Nowa flaga - odblokowuje walkę
+    "ma_upowaznienie_maciek": False,
+    "wiedza_o_mamunie": False,       
     "mamuna_rozmowa": False,
     "mamuna_zalatwiona": False,
     "ruiny_skarb": False,
@@ -339,7 +340,11 @@ clues_found = {
     "rozmowa_pien": False,
     "rozmowa_gawron": False,
     "rozmowa_skrzekacz": False,
-    "rozmowa_latarnik": False
+    "rozmowa_latarnik": False,
+    "podslyszano_soltysa": False,
+    "klamstwo_zielarka_sukces": False,
+    "klamstwo_zielarka_porazka": False,
+    "zna_sekretny_schowek": False
 }
 
 def get_kapliczka_dialogue():
@@ -363,9 +368,16 @@ def get_zielarka_dialogue():
             return ("Zielarka: Szukaj w spalonej chacie, głupcze.", [("Odejdź", "LEAVE")])
         return ("Zielarka: Użyj tego Amuletu przeciw demonom... [ZDOBYTO AMULET]", [("Schowaj amulet i odejdź", "CLUE_AMULET")])
     
+    if clues_found["klamstwo_zielarka_porazka"]:
+        return ("Zielarka: Wynoś się stąd, kłamco! Przejrzałam cię!", [("Odejdź (Zablokowana opcja)", "LEAVE")])
+    
+    choices = [("Odejdź", "LEAVE")]
+    
     if clues_found["zaufanie_soltysa"]:
-        return ("Zielarka: Bieniasz cię przysłał? Zapłać 5 zł, a wskażę ci ruinę.", 
-                [("Zapłać za wskazówkę (5 zł)", "PAY_ZIELARKA"), ("Odejdź", "LEAVE")])
+        choices.insert(0, ("Zapłać za wskazówkę (5 zł)", "PAY_ZIELARKA"))
+        choices.insert(1, ("Skłam: 'Sołtys kazał ci wydać amulet za darmo.' (Test Charyzmy)", "TEST_CHARISMA_ZIELARKA"))
+        return ("Zielarka: Bieniasz cię przysłał? Zapłać 5 zł, a wskażę ci ruinę.", choices)
+        
     return ("Zielarka: Udowodnij najpierw, że tutejsi chcą z tobą gadać.", [("Wyjdź z namiotu", "LEAVE")])
 
 def get_ruiny_dialogue():
@@ -395,7 +407,7 @@ def get_zuk_dialogue():
 def get_bed_dialogue():
     if clues_found.get("mamuna_zalatwiona", False):
         return ("Czujesz dziwny, mroczny niepokój unoszący się nad Chołami...", [("Połóż się spać (Rozpocznij kolejny akt)", "TRIGGER_MOB_EVENT")])
-    return ("Twoje posłanie w starej chacie po Mikołaju.", [("Prześpij się (Regeneracja HP)", "SLEEP"), ("Wyjdź", "LEAVE")])
+    return ("Twoje posłanie w starej chacie po Mikołaju.", [("Prześpij się (Regeneracja HP i Poczytalności)", "SLEEP"), ("Wyjdź", "LEAVE")])
 
 houses = [
     House(250, 60, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue),
@@ -424,6 +436,7 @@ anim_tick = 0
 active_house = None 
 player_pos = pygame.Vector2(215, 410) 
 player_hp, player_max_hp = 100, 100
+player_sanity, player_max_sanity = 100, 100
 player_money = 10 
 base_attack, mod_attack, mod_stamina = 10, 0, 0
 
@@ -465,7 +478,7 @@ for ty in range(0, HEIGHT, 50):
 
 intro_sequence = [
     {"title": "Wnętrze Żuka. Siedzisz na śmierdzącym papierosami, wypierdzianym fotelu obok kierowcy, który wygląda, jak wyjęty żywcem z lat '50 partyzant Vietcongu.", "text": "Kierowca Władek: W Chołach babka spaliła dzieciaka w piecu, chore, co się dzieje z tym światem. Maciej nadal rozpacza, a Marię zabrali do Choroszczy..."},
-    {"title": "Wioska Choły.", "text": "Porozmawiaj z ludźmi. Znajdź poszlaki. Rozwiąż sprawę."}
+    {"title": "Wioska Choły.", "text": "Porozmawiaj z ludźmi. Znajdź poszlaki. Rozwiąż sprawę. Strzeż swojego umysłu..."}
 ]
 intro_step = 0
 
@@ -494,9 +507,24 @@ while running:
                     if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                         current_state = STATE_HOUSE
                         active_house = h
-                        # Lekkie dostosowanie pozycji, by gracz nie blokował się w drzwiach
                         player_pos = pygame.Vector2(WIDTH // 2, HEIGHT - 130)
                         break
+                
+                if current_state == STATE_EXPLORE:
+                    okno_soltysa = pygame.Rect(230, 90, 40, 40)
+                    if okno_soltysa.collidepoint(player_pos.x, player_pos.y):
+                        current_state = STATE_DIALOGUE
+                        dialogue_title = "Ciemne Okno (Dom Sołtysa)"
+                        if clues_found["podslyszano_soltysa"]:
+                            dialogue_lines = ["Nic więcej nie usłyszysz. Wewnątrz panuje głucha cisza."]
+                            dialogue_choices = [("Odejdź", "LEAVE_WINDOW")]
+                        else:
+                            dialogue_lines = ["Widzisz migoczące światło świecy. Słyszysz ściszone, nerwowe głosy.", "To Sołtys z kimś rozmawia. Ryzykujesz podsłuchiwanie?"]
+                            dialogue_choices = [
+                                ("Podsłuchuj (Test Zręczności)", "TEST_AGILITY_WINDOW"), 
+                                ("Zostaw to, zbyt niebezpieczne", "LEAVE_WINDOW")
+                            ]
+                        current_choice_idx = 0
             
             elif current_map == "FOREST":
                 for m in monster_triggers_forest:
@@ -505,9 +533,10 @@ while running:
                         
                         if active_boss_type == BOSS_MAMUNA:
                             if not clues_found["wiedza_o_mamunie"]:
+                                player_sanity -= 15
                                 current_state = STATE_DIALOGUE
                                 dialogue_title = "Mgliste Mokradła"
-                                dialogue_lines = ["Z mgły wyłania się przerażający byt. Przeczuwasz, że bez odpowiedniej wiedzy ta walka to samobójstwo.", "Musisz dowiedzieć się, z czym mierzysz się naprawdę, zanim tu wrócisz!"]
+                                dialogue_lines = ["Z mgły wyłania się przerażający byt. Twój umysł odrzuca ten widok! (-15 Poczytalności)", "Przeczuwasz, że bez odpowiedniej wiedzy ta walka to samobójstwo."]
                                 dialogue_choices = [("Uciekaj!", "LEAVE")]
                                 current_choice_idx = 0
                                 player_pos.y += 40
@@ -742,6 +771,57 @@ while running:
                             current_state = STATE_EXPLORE
                             player_pos.y += 20
                         continue
+                        
+                    elif c_code == "LEAVE_WINDOW":
+                        current_state = STATE_EXPLORE
+                        player_pos.x -= 30 
+                        continue
+                        
+                    elif c_code == "TEST_AGILITY_WINDOW":
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_agility
+                        if roll >= 9:
+                            clues_found["podslyszano_soltysa"] = True
+                            clues_found["zna_sekretny_schowek"] = True
+                            dialogue_title = "Zręczność: Sukces!"
+                            dialogue_lines = [
+                                f"Wynik: {roll}. Podkradłeś się bezszelestnie.",
+                                "Słyszysz Sołtysa: 'Miastowy nie może znaleźć sztyletu w kapliczce. Las nas wtedy zje!'",
+                                "Wiesz już, gdzie szukać!"
+                            ]
+                            dialogue_choices = [("Zanotuj w dzienniku", "LEAVE_WINDOW")]
+                        else:
+                            player_hp -= 15
+                            dialogue_title = "Zręczność: Porażka!"
+                            dialogue_lines = [
+                                f"Wynik: {roll}. Nadepnąłeś na głośną gałąź!",
+                                "Z domu wypada wściekły pies Sołtysa i boleśnie cię gryzie (-15 HP)."
+                            ]
+                            dialogue_choices = [("Uciekaj!", "LEAVE_WINDOW")]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "TEST_CHARISMA_ZIELARKA":
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_charisma
+                        if roll >= 9:
+                            clues_found["zaufanie_zielarki"] = True
+                            clues_found["klamstwo_zielarka_sukces"] = True
+                            dialogue_title = "Charyzma: Sukces!"
+                            dialogue_lines = [
+                                f"Wynik: {roll}. Brzmiałeś niezwykle przekonująco i groźnie.",
+                                "Zielarka kuli się: 'Dobrze, dobrze... Nie mów mu tylko, proszę.",
+                                "Przeszukaj piec w spalonej chacie Marii...'"
+                            ]
+                            dialogue_choices = [("Dobrze (Zaoszczędzono 5 zł)", "LEAVE")]
+                        else:
+                            clues_found["klamstwo_zielarka_porazka"] = True
+                            dialogue_title = "Charyzma: Porażka!"
+                            dialogue_lines = [
+                                f"Wynik: {roll}. Zawahałeś się.",
+                                "Zielarka pluje ci pod nogi: 'Kłamiesz jak pies! Wynocha z mojego namiotu!'"
+                            ]
+                            dialogue_choices = [("Wycofaj się ze wstydu", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
 
                     elif c_code == "CLUE_TOTEM": 
                         clues_found["znaleziono_totem"] = True
@@ -802,13 +882,13 @@ while running:
                             
                     elif c_code == "CLUE_KOSCI": 
                         clues_found["dowod_kosci"] = True
+                        player_sanity -= 20
                         dialogue_title = "Makabryczne Odkrycie"
-                        dialogue_lines = ["Zabezpieczasz nadpalone kości odmieńca. Pokaż to jako dowód Maćkowi."]
+                        dialogue_lines = ["Zabezpieczasz nadpalone kości odmieńca. Zrobiło ci się słabo... (-20 Poczytalności)", "Pokaż to jako dowód Maćkowi."]
                         dialogue_choices = [("Schowaj do torby", "LEAVE")]
                         current_choice_idx = 0
                         continue
 
-                    # --- ZMIANY FABULARNE (MACIEK I CHOROSZCZ) ---
                     elif c_code == "GET_UPOWAZNIENIE":
                         clues_found["ma_upowaznienie_maciek"] = True
                         dialogue_title = "Zdobyto dokument!"
@@ -833,7 +913,6 @@ while running:
                         current_state = STATE_EXPLORE
                         player_pos.y += 30
                         continue
-                    # ----------------------------------------------
 
                     elif c_code == "TRIGGER_MOB_EVENT":
                         dialogue_title = "Środek Nocy - Bunt!"
@@ -860,24 +939,24 @@ while running:
                         continue
 
                     elif c_code == "MOB_ESCAPE_FOREST":
-                        roll = random.randint(1, 6) + random.randint(1, 6)
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_agility
                         if roll >= 7:
                             dialogue_title = "Zręczność: Sukces!"
                             dialogue_lines = ["Wyskoczyłeś oknem na tyłach, zaledwie sekundy przed wdarciem się tłumu.", "Biegniesz prosto w najciemniejszy mrok lasu..."]
                             dialogue_choices = [("Biegnij dalej", "MEET_DZIADEK_DIALOGUE")]
                             current_choice_idx = 0
                         else:
-                            end_message = "Wynik Zręczności: Porażka!\nPotknąłeś się o próg izby. Rozwścieczony tłum z Sołtysem na czele wyciągnął cię z chaty.\nZostałeś zlinczowany. (GAME OVER)"
+                            end_message = f"Wynik Zręczności: {roll} (Porażka!).\nPotknąłeś się o próg izby. Rozwścieczony tłum z Sołtysem na czele wyciągnął cię z chaty.\nZostałeś zlinczowany. (GAME OVER)"
                             current_state = STATE_END
                         continue
 
                     elif c_code == "MOB_ESCAPE_CAR":
-                        roll = random.randint(1, 6) + random.randint(1, 6)
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_agility
                         if roll >= 8:
-                            end_message = "Wynik Zręczności: Ekstremalny Sukces!\nDopadasz Żuka, błyskawicznie zwierasz kable pod kierownicą i odjeżdżasz z piskiem opon.\nUdało ci się wrócić do Wrocławia i ocalić skórę. (ZAKOŃCZENIE: TCHÓRZLIWA UCIECZKA)"
+                            end_message = f"Wynik Zręczności: {roll} (Ekstremalny Sukces!).\nDopadasz Żuka, błyskawicznie zwierasz kable pod kierownicą i odjeżdżasz z piskiem opon.\nUdało ci się wrócić do Wrocławia i ocalić skórę. (ZAKOŃCZENIE: TCHÓRZLIWA UCIECZKA)"
                             current_state = STATE_END
                         else:
-                            end_message = "Wynik Zręczności: Porażka!\nStary silnik Żuka po prostu odmówił posłuszeństwa. Tłum rozbił szyby i...\nZostałeś zlinczowany we wrakach maszyny. (GAME OVER)"
+                            end_message = f"Wynik Zręczności: {roll} (Porażka!).\nStary silnik Żuka po prostu odmówił posłuszeństwa. Tłum rozbił szyby i...\nZostałeś zlinczowany we wrakach maszyny. (GAME OVER)"
                             current_state = STATE_END
                         continue
 
@@ -900,7 +979,7 @@ while running:
                         continue
 
                     elif c_code == "DZIADEK_LIE":
-                        roll = random.randint(1, 6) + random.randint(1, 6)
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_charisma
                         if roll >= 7:
                             dialogue_title = "Charyzma: Sukces!"
                             dialogue_lines = [
@@ -922,8 +1001,9 @@ while running:
                         
                     elif c_code == "SLEEP": 
                         player_hp = player_max_hp
+                        player_sanity = min(player_max_sanity, player_sanity + 30)
                         dialogue_title = "Odpoczynek"
-                        dialogue_lines = ["Przespałeś się na starym łóżku. Twoje rany się zagoiły."]
+                        dialogue_lines = ["Przespałeś się na starym łóżku. Twoje rany się zagoiły, a umysł odpoczął."]
                         dialogue_choices = [("Wstań", "LEAVE")]
                         current_choice_idx = 0
                         continue
@@ -1075,7 +1155,7 @@ while running:
                         continue
 
                     elif c_code == "TREE_LIE_1":
-                        roll = random.randint(1,6) + random.randint(1,6)
+                        roll = random.randint(1,6) + random.randint(1,6) + player_charisma
                         if roll >= 7:
                             dialogue_title = "Charyzma (Sukces!)"
                             dialogue_lines = [
@@ -1105,7 +1185,7 @@ while running:
                         continue
 
                     elif c_code == "TREE_LUSIA":
-                        roll = random.randint(1,6) + random.randint(1,6) + 2
+                        roll = random.randint(1,6) + random.randint(1,6) + player_charisma + 2
                         if roll >= 8:
                             end_message = f"Wynik z Lusią: {roll}. Lusia staje w twojej obronie.\nOna przekonuje Ducha Lasu, by odroczyć pobudkę Krzykacza o 3 dni.\nPokój, póki co, został zachowany. (SUKCES - Koniec Epizodu)"
                             current_state = STATE_END
@@ -1184,10 +1264,16 @@ while running:
                 
                 if current_state == STATE_EXPLORE:
                     screen.blit(font_main.render(f"Sakiewka: {player_money} zł", True, (255, 215, 0)), (20, 20))
+                    
                     pygame.draw.rect(screen, (50, 0, 0), (20, 50, 150, 15))
                     pygame.draw.rect(screen, (200, 50, 50), (20, 50, 150 * (player_hp / player_max_hp), 15))
                     pygame.draw.rect(screen, (200, 200, 200), (20, 50, 150, 15), 1)
                     screen.blit(font_sub.render("Zdrowie Drozda", True, (255, 255, 255)), (20, 70))
+                    
+                    pygame.draw.rect(screen, (30, 0, 50), (20, 90, 150, 15))
+                    pygame.draw.rect(screen, (150, 50, 200), (20, 90, 150 * (max(0, player_sanity) / player_max_sanity), 15))
+                    pygame.draw.rect(screen, (200, 200, 200), (20, 90, 150, 15), 1)
+                    screen.blit(font_sub.render("Poczytalność", True, (255, 255, 255)), (20, 110))
         
         elif current_map == "FOREST":
             screen.fill((20, 25, 20))
@@ -1282,6 +1368,25 @@ while running:
         screen.fill((0, 0, 0))
         draw_text_wrapped(screen, end_message, font_title, (200, 50, 50), WIDTH//2 - 350, HEIGHT//2 - 100, 700)
         screen.blit(font_sub.render("[ESC] - Wyjście", True, (100,100,100)), (WIDTH//2 - 50, HEIGHT - 50))
+
+    # --- EFEKTY HALUCYNACJI ---
+    if player_sanity <= 40 and current_state not in [STATE_END, STATE_INTRO]:
+        pulsing = math.sin(anim_tick * 0.1) * 30
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((int(50 + pulsing), 0, 0, 40)) 
+        
+        jitter_x = random.randint(-3, 3)
+        jitter_y = random.randint(-3, 3)
+        screen.blit(overlay, (jitter_x, jitter_y))
+        
+        if random.randint(1, 20) == 1:
+            phantom_x, phantom_y = random.randint(0, WIDTH), random.randint(0, HEIGHT)
+            pygame.draw.circle(screen, (255, 0, 0), (phantom_x, phantom_y), 4)
+
+    # --- OBŁĘD (GAME OVER) ---
+    if player_sanity <= 0 and current_state != STATE_END:
+        end_message = "Twój umysł nie zniósł koszmaru Chołów.\nPopadłeś w głęboki obłęd. Trafiłeś do zakładu w Choroszczy, dołączając do Marii... (GAME OVER)"
+        current_state = STATE_END
 
     pygame.display.flip()
 
