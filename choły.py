@@ -327,7 +327,7 @@ for ty in range(0, HEIGHT, 50):
         pygame.draw.rect(terrain_surface, (int(base_g*0.85), base_g, int(base_g*0.65)), (tx, ty, 50, 50))
 
 intro_sequence = [
-    {"title": "Wnętrze Żuka. Czuć benzynę.", "text": "Kierowca Władek: W Chołach zjedli dzieciaka... węszy tu zło."},
+    {"title": "Wnętrze Żuka. Siedzisz na śmierdzącej papierosami, wypierdzianym fotelu obok kierowcy, który wygląda, jak wyjęty żywcem z lat '50 partyzant Vietcongu.", "text": "Kierowca Władek: W Chołach zjedli dzieciaka... węszy tu zło."},
     {"title": "Wioska Choły.", "text": "Porozmawiaj z ludźmi. Znajdź poszlaki, by popchnąć sprawę do przodu."}
 ]
 intro_step = 0
