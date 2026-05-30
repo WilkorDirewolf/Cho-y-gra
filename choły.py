@@ -3,6 +3,7 @@ import sys
 import random
 import math
 import numpy as np
+from collections import defaultdict
 
 # --- INICJALIZACJA DŹWIĘKU I PYGAME ---
 pygame.mixer.pre_init(44100, -16, 2, 2048)
@@ -44,7 +45,6 @@ def generate_slavic_theme():
         'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'rest': 0.0
     }
 
-    # 1. Melodia (Flet - szybsza, nostalgiczna i niepokojąca)
     melody = [
         ('D4', 0.4), ('F4', 0.2), ('E4', 0.2), ('D4', 0.4), ('A3', 0.4),
         ('D4', 0.4), ('F4', 0.2), ('G4', 0.2), ('A4', 0.8),
@@ -52,7 +52,6 @@ def generate_slavic_theme():
         ('D4', 0.2), ('E4', 0.2), ('F4', 0.2), ('E4', 0.2), ('D4', 0.8)
     ] * 2
 
-    # 2. Harmonia (Skrzypce - długie, ponure przeciągnięcia)
     harmony = [
         ('D3', 1.6), ('F3', 1.6), 
         ('C4', 1.6), ('D3', 1.6)
@@ -65,19 +64,15 @@ def generate_slavic_theme():
     violin_track = np.zeros(total_samples)
     percussion_track = np.zeros(total_samples)
     
-    # --- Generowanie Fletu ---
     current_sample = 0
     for note, duration in melody:
         samples = int(sample_rate * duration)
         if note != 'rest':
             freq = notes[note]
             t = np.linspace(0, duration, samples, False)
-            # Flet: sinus + bardzo cichy sinus oktawę wyżej
             wave = 0.8 * np.sin(2 * np.pi * freq * t) + 0.2 * np.sin(2 * np.pi * (freq * 2) * t)
-            # Tremolo (drżenie głośności)
             tremolo = 1.0 + 0.15 * np.sin(2 * np.pi * 6 * t)
             wave *= tremolo
-            
             env = np.ones_like(t)
             attack, release = int(sample_rate * 0.05), int(sample_rate * 0.1)
             if samples > attack + release:
@@ -86,56 +81,46 @@ def generate_slavic_theme():
             flute_track[current_sample:current_sample+samples] += wave * env * 0.5
         current_sample += samples
 
-    # --- Generowanie Skrzypiec ---
     current_sample = 0
     for note, duration in harmony:
         samples = int(sample_rate * duration)
         if note != 'rest':
             freq = notes[note]
             t = np.linspace(0, duration, samples, False)
-            # Vibrato: modulacja częstotliwości (około 5 Hz)
             vibrato = np.sin(2 * np.pi * 5 * t) * 0.015
             mod_freq = freq * (1 + vibrato)
-            
-            # Fala piłokształtna symulująca smyczek
             phase = np.cumsum(mod_freq) / sample_rate
             wave = 2 * (phase - np.floor(phase + 0.5))
-            # Zmiękczanie ostrej piły (prosty filtr dolnoprzepustowy)
             wave = 0.5 * wave + 0.5 * np.sin(2 * np.pi * mod_freq * t)
-            
             env = np.ones_like(t)
-            attack, release = int(sample_rate * 0.4), int(sample_rate * 0.6) # Długie wejście smyczka
+            attack, release = int(sample_rate * 0.4), int(sample_rate * 0.6) 
             if samples > attack + release:
                 env[:attack] = np.linspace(0, 1, attack)
                 env[-release:] = np.linspace(1, 0, release)
             violin_track[current_sample:current_sample+samples] += wave * env * 0.4
         current_sample += samples
 
-    # --- Generowanie Perkusji (Bębny i Grzechotki) ---
     beat_interval = 0.4
     num_beats = int(total_duration / beat_interval)
     t_total = np.linspace(0, total_duration, total_samples, False)
     
     for i in range(num_beats):
         beat_start = int(i * beat_interval * sample_rate)
-        # Szamańska Stopa (Bęben) - mocne tąpnięcia na 1 i 3
         if i % 2 == 0:
             beat_end = min(beat_start + int(0.2 * sample_rate), total_samples)
             t_beat = t_total[:beat_end-beat_start]
-            kick_freq = np.linspace(120, 30, len(t_beat)) # Pitch drop
+            kick_freq = np.linspace(120, 30, len(t_beat)) 
             kick = np.sin(2 * np.pi * kick_freq * t_beat)
-            kick_env = np.exp(-12 * t_beat) # Szybki zanik
+            kick_env = np.exp(-12 * t_beat) 
             percussion_track[beat_start:beat_end] += kick * kick_env * 0.9
         
-        # Grzechotka (Szum) - rytmika na słabsze uderzenia
         if i % 2 != 0 or i % 4 == 3:
             shaker_end = min(beat_start + int(0.08 * sample_rate), total_samples)
             t_shaker = t_total[:shaker_end-beat_start]
-            noise = np.random.uniform(-1, 1, len(t_shaker)) # Biały szum
+            noise = np.random.uniform(-1, 1, len(t_shaker)) 
             shaker_env = np.exp(-25 * t_shaker)
             percussion_track[beat_start:shaker_end] += noise * shaker_env * 0.25
 
-    # --- Mixowanie Ścieżek ---
     final_track = flute_track + violin_track + percussion_track
     final_track = np.clip(final_track, -1.0, 1.0)
     track_16bit = np.int16(final_track * 32767)
@@ -257,28 +242,57 @@ def draw_npc_sprzedawca(surface, x, y):
     pygame.draw.rect(surface, C_LIGHT, (x-S(3), y-S(12), S(6), S(8))) 
     pygame.draw.line(surface, C_BLACK, (x-S(2), y-S(8)), (x+S(2), y-S(8)), S(1)) 
 
-# --- ARCHITEKTURA ---
-def draw_slavic_house(surface, x, y, width, height, roof_color=None, ruined=False):
-    main_rect = pygame.Rect(x, y + height//3, width, height - height//3)
-    pygame.draw.rect(surface, C_BROWN, main_rect)
-    for i in range(x + 4, x + width - 2, S(16)):
-        deska_h = height - height//3 - random.randint(2, 6)
-        pygame.draw.rect(surface, C_DARK, (i, y + height//3 + random.randint(0,4), S(4), deska_h))
-
-    if not ruined:
-        roof_poly = [(x - S(15), y + height//3), (x + width // 2, y - S(10)), (x + width + S(15), y + height//3 + S(10))]
-        pygame.draw.polygon(surface, C_VOID, roof_poly)
-        pygame.draw.polygon(surface, C_BLACK, roof_poly, 2) 
-        okno_r = pygame.Rect(x + width//2 + S(10), y + height//2, S(20), S(25))
-        pygame.draw.rect(surface, C_BLACK, okno_r)
-        pygame.draw.line(surface, C_GRAY, (okno_r.x, okno_r.y), (okno_r.right, okno_r.bottom), 1)
-        pygame.draw.line(surface, C_GRAY, (okno_r.right, okno_r.y+5), (okno_r.x+5, okno_r.bottom), 1)
-        drzwi_r = pygame.Rect(x + S(15), y + height - S(35), S(22), S(35))
-        pygame.draw.rect(surface, C_BLACK, drzwi_r)
-    else:
+# --- ARCHITEKTURA I ŚRODOWISKO (MARTWA WIOSKA) ---
+def draw_uncanny_house(surface, x, y, width=160, height=110, ruined=False):
+    if ruined:
+        # Wersja zgliszcz, ale wciąż prosta i martwa
+        C_WALL = (30, 25, 25)
+        main_rect = pygame.Rect(x, y + height//3, width, height - height//3)
+        pygame.draw.rect(surface, C_WALL, main_rect)
+        pygame.draw.rect(surface, C_BLACK, main_rect, 2)
         pygame.draw.polygon(surface, C_VOID, [(x - S(5), y + height//3), (x + width // 3, y + S(5)), (x + width//2, y + height//3 + S(5))])
         pygame.draw.line(surface, C_DARK, (x + S(10), y + height//3), (x + width - S(10), y - S(20)), 4) 
-    pygame.draw.rect(surface, C_BLACK, main_rect, 2)
+    else:
+        C_WALL = (85, 80, 75)   # Zimne, szare drewno
+        C_ROOF = (50, 45, 45)   # Ciemny, stary gont
+        C_WINDOW = (5, 5, 5)    # Smoliście czarne - zero światła
+        
+        pygame.draw.rect(surface, C_WALL, (x, y, width, height))
+        pygame.draw.rect(surface, C_BLACK, (x, y, width, height), 2)
+        
+        # Symetryczne, nienaturalnie równe deski
+        for i in range(S(15), height, S(15)):
+            pygame.draw.line(surface, (70, 65, 60), (x, y + i), (x + width, y + i), 1)
+            
+        roof_poly = [(x - S(15), y), (x + width // 2, y - S(70)), (x + width + S(15), y)]
+        pygame.draw.polygon(surface, C_ROOF, roof_poly)
+        pygame.draw.polygon(surface, C_BLACK, roof_poly, 2)
+        
+        # Drzwi
+        dw, dh = S(36), S(45)
+        pygame.draw.rect(surface, (40, 35, 30), (x + width//2 - dw//2, y + height - dh, dw, dh))
+        pygame.draw.rect(surface, C_BLACK, (x + width//2 - dw//2, y + height - dh, dw, dh), 2)
+        
+        # Okna
+        ww, wh = S(30), S(35)
+        pygame.draw.rect(surface, C_WINDOW, (x + S(20), y + S(40), ww, wh))
+        pygame.draw.rect(surface, C_WINDOW, (x + width - S(50), y + S(40), ww, wh))
+        pygame.draw.rect(surface, (60, 55, 50), (x + S(20), y + S(40), ww, wh), 2)
+        pygame.draw.rect(surface, (60, 55, 50), (x + width - S(50), y + S(40), ww, wh), 2)
+
+def draw_dead_grass(surface, x_start, x_end, y_start, y_end, count=150):
+    C_GRASS = (70, 85, 70) 
+    for _ in range(count):
+        gx = random.randint(x_start, x_end)
+        gy = random.randint(y_start, y_end)
+        # Nienaturalnie proste źdźbła
+        pygame.draw.line(surface, C_GRASS, (gx, gy), (gx, gy - S(random.randint(6, 12))), 1)
+
+def draw_oily_mud(surface, x, y, width, height):
+    C_MUD_DARK = (30, 28, 25)
+    C_MUD_REFLECTION = (55, 55, 60)
+    pygame.draw.ellipse(surface, C_MUD_DARK, (x, y, width, height))
+    pygame.draw.ellipse(surface, C_MUD_REFLECTION, (x + S(4), y + S(2), width - S(12), height - S(6)))
 
 def draw_tree(surface, x, y):
     pien_poly = [(x - S(6), y + S(10)), (x + S(8), y + S(8)), (x + S(10), y - S(40)), (x, y - S(80)), (x - S(8), y - S(30))]
@@ -300,40 +314,31 @@ def draw_well(surface, x, y):
     pygame.draw.polygon(surface, C_BLACK, [(x - w//2 - 4, y - S(35)), (x, y - S(45)), (x + w//2 + 4, y - S(35))], 1)
 
 def draw_zuk(surface, x, y, light=False):
-    # Kolory
-    C_KAROSERIA = (90, 105, 115) # Wyblakły, smętny niebieski/szary
-    C_PLANDEKA = (130, 130, 125) # Brudny, płócienny szary
+    C_KAROSERIA = (90, 105, 115) 
+    C_PLANDEKA = (130, 130, 125) 
     C_OPONY = (20, 20, 20)
-    C_SZYBY = (15, 20, 25) # Nienaturalnie ciemne szyby
+    C_SZYBY = (15, 20, 25) 
     
-    # Paka z plandeką (tył)
-    pygame.draw.rect(surface, C_PLANDEKA, (x - 70, y - 65, 85, 35))
-    pygame.draw.rect(surface, C_KAROSERIA, (x - 70, y - 30, 85, 20))
+    pygame.draw.rect(surface, C_PLANDEKA, (x - S(70), y - S(65), S(85), S(35)))
+    pygame.draw.rect(surface, C_KAROSERIA, (x - S(70), y - S(30), S(85), S(20)))
     
-    # Kabina (środek)
-    pygame.draw.rect(surface, C_KAROSERIA, (x + 15, y - 55, 35, 45))
-    # Szyba boczna
-    pygame.draw.polygon(surface, C_SZYBY, [(x + 20, y - 50), (x + 45, y - 50), (x + 45, y - 35), (x + 20, y - 35)])
+    pygame.draw.rect(surface, C_KAROSERIA, (x + S(15), y - S(55), S(35), S(45)))
+    pygame.draw.polygon(surface, C_SZYBY, [(x + S(20), y - S(50)), (x + S(45), y - S(50)), (x + S(45), y - S(35)), (x + S(20), y - S(35))])
     
-    # Maska (charakterystyczny nos Żuka)
-    pygame.draw.polygon(surface, C_KAROSERIA, [(x + 50, y - 35), (x + 70, y - 25), (x + 70, y - 10), (x + 50, y - 10)])
-    # Zderzak
-    pygame.draw.rect(surface, (50, 50, 50), (x + 65, y - 12, 10, 6))
+    pygame.draw.polygon(surface, C_KAROSERIA, [(x + S(50), y - S(35)), (x + S(70), y - S(25)), (x + S(70), y - S(10)), (x + S(50), y - S(10))])
+    pygame.draw.rect(surface, (50, 50, 50), (x + S(65), y - S(12), S(10), S(6)))
 
-    # Koła z kołpakami
-    pygame.draw.circle(surface, C_OPONY, (x - 40, y - 5), 14)
-    pygame.draw.circle(surface, C_OPONY, (x + 35, y - 5), 14)
-    pygame.draw.circle(surface, (100, 100, 100), (x - 40, y - 5), 6) # Felga tył
-    pygame.draw.circle(surface, (100, 100, 100), (x + 35, y - 5), 6) # Felga przód
+    pygame.draw.circle(surface, C_OPONY, (x - S(40), y - S(5)), S(14))
+    pygame.draw.circle(surface, C_OPONY, (x + S(35), y - S(5)), S(14))
+    pygame.draw.circle(surface, (100, 100, 100), (x - S(40), y - S(5)), S(6)) 
+    pygame.draw.circle(surface, (100, 100, 100), (x + S(35), y - S(5)), S(6))
 
-    # Reflektory i światło
-    pygame.draw.ellipse(surface, (200, 200, 200) if not light else (255, 255, 180), (x + 66, y - 24, 6, 10))
+    pygame.draw.ellipse(surface, (200, 200, 200) if not light else (255, 255, 180), (x + S(66), y - S(24), S(6), S(10)))
     
     if light:
-        # Półprzezroczysty snop światła w mgle
-        light_surf = pygame.Surface((250, 100), pygame.SRCALPHA)
-        pygame.draw.polygon(light_surf, (255, 255, 150, 40), [(0, 30), (250, 0), (250, 100)])
-        surface.blit(light_surf, (x + 70, y - 54))
+        light_surf = pygame.Surface((S(250), S(100)), pygame.SRCALPHA)
+        pygame.draw.polygon(light_surf, (255, 255, 150, 40), [(0, S(30)), (S(250), 0), (S(250), S(100))])
+        surface.blit(light_surf, (x + S(70), y - S(54)))
 
 # --- POTWORY ---
 def draw_monster_latarnik(surface, x, y, anim_tick):
@@ -573,6 +578,9 @@ def draw_menel(surface, x, y):
     pygame.draw.circle(surface, C_RED, (x+3, y-3), 2)
 
 # --- FUNKCJE POMOCNICZE ---
+def get_sklep_dialogue():
+    return "Sklep. Czego szukasz, miastowy?", [("Kup Cukierki (5zł)", "BUY_CANDY"), ("Kup Wino (10zł)", "BUY_WINE"), ("Wyjdź", "LEAVE")]
+
 def draw_text_wrapped(surface, text, font, color, x, y, max_width):
     paragraphs = text.split('\n')
     y_offset = 0
@@ -646,18 +654,12 @@ class RunnerObstacle:
         pygame.draw.rect(surface, color, (S(r.x), S(r.y), S(r.width), S(r.height)))
         pygame.draw.rect(surface, C_BLACK, (S(r.x), S(r.y), S(r.width), S(r.height)), 2)
 
-
 low_terrain_surface = pygame.Surface((LOW_W, LOW_H))
-low_terrain_surface.fill(C_BLACK)
-for ty in range(0, LOW_H, S(16)):
-    for tx in range(0, LOW_W, S(16)):
-        if random.random() < 0.2:
-            base_col = C_BROWN if random.choice([True, False]) else C_VOID
-            pygame.draw.rect(low_terrain_surface, (max(0, base_col[0]-10), max(0, base_col[1]-10), base_col[2]), (tx, ty, S(20), S(18)))
-        if random.random() < 0.1:
-            pygame.draw.line(low_terrain_surface, C_DARK, (tx, ty + random.randint(0,10)), (tx + random.randint(-5,5), ty - S(8)), 1)
-        if random.random() < 0.05:
-            pygame.draw.circle(low_terrain_surface, C_GRAY, (tx + random.randint(0,10), ty + random.randint(0,10)), 1)
+low_terrain_surface.fill((40, 45, 40)) # Ciemna zieleń/szarość
+draw_oily_mud(low_terrain_surface, S(200), S(350), S(80), S(20))
+draw_oily_mud(low_terrain_surface, S(500), S(400), S(120), S(25))
+draw_oily_mud(low_terrain_surface, S(150), S(200), S(90), S(15))
+draw_dead_grass(low_terrain_surface, 0, LOW_W, LOW_H // 2, LOW_H, count=400)
 
 current_state = STATE_INTRO
 anim_tick = 0
@@ -699,25 +701,19 @@ intro_sequence = [
 ]
 intro_step = 0
 
-from collections import defaultdict
-
 # --- BRAKUJĄCE ZMIENNE INICJALIZACYJNE ---
-# Drzewa na mapach
 decorations_trees = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(15)]
 forest_trees = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(35)]
 
-# Statystyki gracza i ekwipunek
 player_agility = 5
 player_charisma = 5
-clues_found = defaultdict(bool) # Zapobiega błędom, gdy gra szuka poszlaki, której jeszcze nie ma
+clues_found = defaultdict(bool)
 
-# Prosta klasa budynków, by obsłużyć kolizje i wejścia
 class BasicHouse:
-    def __init__(self, x, y, name, w=150, h=100, ruined=False):
+    def __init__(self, x, y, name, w=160, h=110, ruined=False):
         self.rect = pygame.Rect(x, y, w, h)
         self.door_rect = pygame.Rect(x + 20, y + h - 40, 40, 40)
         self.name = name
-        self.roof_color = None
         self.ruined = ruined
     def dialog_func(self):
         return "Zamknięte na głucho.", [("Odejdź", "LEAVE")]
@@ -1639,25 +1635,20 @@ while running:
         game_surface.fill(C_BLACK)
         
         if intro_step == 0:
-            # Mijane drzewa symulujące jazdę w nocy
             for i in range(15): 
                 tx = S((i*150 - anim_tick*6) % (WIDTH + 300) - 150)
                 draw_tree(game_surface, tx, LOW_H - S(120))
             
-            # Nasz jadący Żuk na środku ekranu
             draw_zuk(game_surface, S(WIDTH // 2), LOW_H - S(80), light=True)
             
-            # Ostry deszcz zacinający na wietrze
             for _ in range(60):
                 rx, ry = random.randint(0, LOW_W), random.randint(0, LOW_H)
                 pygame.draw.line(game_surface, C_GRAY, (rx, ry), (rx - S(15), ry + S(35)), 1)
                 
         elif intro_step == 1:
-            # Żuk dociera do Chołów i parkuje
             for i in range(12): 
                 draw_tree(game_surface, S(30 + i*100 * SCALE_F), LOW_H - S(150))
             
-            # Samochód stoi w wiosce, a światła mrugają (uszkodzona instalacja)
             draw_zuk(game_surface, S(WIDTH // 2), LOW_H - S(100), light=(anim_tick % 60 < 40))
             
         apply_atmosphere(game_surface)
@@ -1727,7 +1718,7 @@ while running:
                     if "Wóz (Żuk)" in h.name:
                         draw_zuk(game_surface, S(h.rect.x), S(h.rect.y), light=False)
                     else:
-                        draw_slavic_house(game_surface, S(h.rect.x), S(h.rect.y), S(h.rect.width), S(h.rect.height), h.roof_color, h.ruined)
+                        draw_uncanny_house(game_surface, S(h.rect.x), S(h.rect.y), S(h.rect.width), S(h.rect.height), h.ruined)
         
         elif current_map == "FOREST":
             game_surface.fill((5, 5, 10)) 
@@ -1859,3 +1850,6 @@ while running:
         screen.blit(font_sub.render("[ESC] - Wyjście", True, C_DARK), (WIDTH//2 - 50, HEIGHT - 100))
 
     pygame.display.flip()
+
+pygame.quit()
+sys.exit()
