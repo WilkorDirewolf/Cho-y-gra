@@ -2,8 +2,11 @@ import pygame
 import sys
 import random
 import math
+import numpy as np
 
-# Inicjalizacja Pygame
+# --- INICJALIZACJA DŹWIĘKU I PYGAME ---
+# Musimy wymusić parametry mixera przed init, aby pasowały do naszej tablicy numpy
+pygame.mixer.pre_init(44100, -16, 2, 1024)
 pygame.init()
 pygame.mixer.init()
 
@@ -12,6 +15,82 @@ WIDTH, HEIGHT = 950, 700
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Mroczna Baśń")
 clock = pygame.time.Clock()
+
+# --- PROCEDURALNY GENERATOR MUZYKI (Słowiański Folk) ---
+def generate_slavic_theme():
+    sample_rate = 44100
+    # Skala Frygijska dla mrocznego klimatu (A Phrygian)
+    notes = {
+        'A1': 55.00, 'A2': 110.00, 'Bb2': 116.54, 'C3': 130.81, 'D3': 146.83,
+        'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'rest': 0.0
+    }
+
+    # Sekwencja melodii: wolna, nieregularna, pełna niepokoju
+    melody = [
+        ('A2', 1.5), ('Bb2', 0.5), ('A2', 1.0), ('C3', 1.0),
+        ('E3', 2.0), ('F3', 0.5), ('E3', 1.5), ('D3', 1.0),
+        ('A2', 1.0), ('Bb2', 0.5), ('A2', 0.5), ('F3', 1.0), ('E3', 1.0),
+        ('C3', 1.0), ('Bb2', 1.0), ('A2', 3.0), ('rest', 1.0)
+    ]
+
+    total_duration = sum(dur for _, dur in melody)
+    total_samples = int(sample_rate * total_duration)
+    track = np.zeros(total_samples)
+
+    current_sample = 0
+    for note_name, duration in melody:
+        samples = int(sample_rate * duration)
+        if note_name != 'rest':
+            freq = notes[note_name]
+            t = np.linspace(0, duration, samples, False)
+            
+            # Lekkie, "pijane" wibrato nadające niepokój
+            vibrato = np.sin(2 * np.pi * 3.5 * t) * (freq * 0.015) 
+            
+            # Główna fala: połączenie zatkanej sinusoidy i ostrej fali piłokształtnej (brzmi jak lira korbowa)
+            wave = 0.5 * np.sin(2 * np.pi * (freq + vibrato) * t)
+            # Fala piłokształtna w czystym numpy:
+            wave += 0.35 * (2 * ((t * (freq + vibrato)) - np.floor((t * (freq + vibrato)) + 0.5)))
+            
+            # Obwiednia (ADSR) - smyczkowe, wolne narastanie
+            env = np.ones_like(t)
+            attack = min(int(sample_rate * 0.4), samples // 2)
+            release = min(int(sample_rate * 0.6), samples // 2)
+            env[:attack] = np.linspace(0, 1, attack)
+            env[-release:] = np.linspace(1, 0, release)
+
+            track[current_sample:current_sample+samples] += wave * env * 0.5
+
+        current_sample += samples
+
+    # Głęboki Drone (Ciągły bas na dźwięku A1)
+    t_total = np.linspace(0, total_duration, total_samples, False)
+    drone_freq = notes['A1']
+    
+    # Dudnienie (Beating) - dwie częstotliwości przesunięte o 1Hz
+    drone = 0.5 * np.sin(2 * np.pi * drone_freq * t_total)
+    drone += 0.4 * np.sin(2 * np.pi * (drone_freq + 1.0) * t_total)
+    drone += 0.1 * (2 * ((t_total * drone_freq) - np.floor((t_total * drone_freq) + 0.5)))
+    
+    track += drone * 0.45
+
+    # Zabezpieczenie przed przesterowaniem (Clipping)
+    track = np.clip(track, -1.0, 1.0)
+    
+    # Konwersja na 16-bitowe liczby całkowite
+    track_16bit = np.int16(track * 32767)
+    
+    # Skopiowanie mono do kanałów stereo
+    stereo_track = np.column_stack((track_16bit, track_16bit))
+    return stereo_track
+
+# Generowanie i uruchamianie muzyki w tle
+print("Generowanie mrocznej, proceduralnej ścieżki dźwiękowej... (To może potrwać sekundę)")
+audio_data = generate_slavic_theme()
+slavic_sound = pygame.sndarray.make_sound(audio_data)
+slavic_sound.set_volume(0.25)
+slavic_sound.play(loops=-1, fade_ms=2000)
+print("Puszcza szepcze...")
 
 # --- STANY GRY ---
 STATE_INTRO = "INTRO"
@@ -322,9 +401,9 @@ monster_triggers_forest = [
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
     {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ_FOREST, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 - 30, HEIGHT//2 + 100, 60, 60), "type": BOSS_MAMUNA, "beaten": False}, # Mamuna przestawiona na główną ścieżkę
+    {"rect": pygame.Rect(WIDTH//2 - 30, HEIGHT//2 + 100, 60, 60), "type": BOSS_MAMUNA, "beaten": False}, 
     {"rect": pygame.Rect(WIDTH//2 - 50, HEIGHT//2 - 250, 60, 60), "type": BOSS_GAWRON, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False} # Skrzekacz przesunięty na prawo
+    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False} 
 ]
 
 # Zmienne ogólne
@@ -414,7 +493,6 @@ while running:
                     if not m["beaten"] and m["rect"].collidepoint(player_pos.x, player_pos.y):
                         active_boss_type = m["type"]
                         
-                        # Przechwytywanie dialogów demonów
                         if active_boss_type == BOSS_MAMUNA and not clues_found["mamuna_rozmowa"]:
                             current_state = STATE_DIALOGUE
                             dialogue_title = "Leże Mamuny - Konfrontacja"
@@ -460,7 +538,6 @@ while running:
                             player_pos.y += 20
                             break
                         elif m["beaten"] == False and active_boss_type not in [BOSS_LATARNIK, BOSS_PIEN, BOSS_GAWRON, BOSS_SKRZEKACZ, BOSS_MAMUNA]:
-                            # Inne bezpośrednie walki
                             current_state = STATE_DICE_ROLL
                             boss_hp = boss_max_hp = 100
                             break
@@ -494,7 +571,6 @@ while running:
         player_combat_pos.x = max(100, min(WIDTH-100, player_combat_pos.x))
         player_combat_pos.y = max(150, min(HEIGHT-50, player_combat_pos.y))
         
-        # LOGIKA LATARNIKA (zależna od zmęczenia i wyborów)
         if active_boss_type == BOSS_LATARNIK:
             speed_multiplier = max(0.2, 1.0 - (latarnik_fatigue / latarnik_max_fatigue))
             latarnik_pos.x += math.sin(combat_timer * 0.1) * 15 * speed_multiplier
@@ -507,7 +583,6 @@ while running:
                 dist = math.hypot(dx, dy) if math.hypot(dx, dy) != 0 else 1
                 combat_projectiles.append(Projectile(latarnik_pos.x, latarnik_pos.y, (dx/dist)*8, (dy/dist)*8, (0, 255, 255), 8))
         else:
-            # Atak standardowych Bossów
             fire_rate = 40 if active_boss_type != BOSS_TRUE_KRZYKACZ else 25
             if combat_timer % fire_rate == 0:
                 dx, dy = player_combat_pos.x - (WIDTH//2), player_combat_pos.y - 220
@@ -516,7 +591,6 @@ while running:
                 color = (255, 60, 0) if active_boss_type != BOSS_TRUE_KRZYKACZ else (100, 0, 0)
                 combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*spd, (dy/dist)*spd, color, 10))
             
-        # Strzelanie gracza
         if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
             combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -10, (255, 255, 255), 4))
 
@@ -536,12 +610,10 @@ while running:
                 player_hp -= dmg
                 combat_projectiles.remove(p)
             elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT:
-                # MECHANIKA ZMĘCZENIA - Każdy udany unik gracza przeciwko Latarnikowi
                 if active_boss_type == BOSS_LATARNIK and latarnik_fatigue < latarnik_max_fatigue:
                     latarnik_fatigue += 1
                 combat_projectiles.remove(p)
 
-        # INSTA-KILL KRZYKACZA
         if active_boss_type == BOSS_TRUE_KRZYKACZ and player_hp < player_max_hp / 3:
             end_message = "Krzykacz ryczy przeraźliwie, podnosi cię potężnymi łapami...\nJego kościana szczęka jelenia zamyka się na twojej głowie.\nZostałeś pożarty. (GAME OVER)"
             current_state = STATE_END
@@ -640,7 +712,6 @@ while running:
                     if not c_code and len(dialogue_choices) > 0:
                         c_code = dialogue_choices[current_choice_idx][1]
                     
-                    # Logika wyjścia z budynku/dialogu
                     if c_code == "LEAVE":
                         if current_map == "VILLAGE":
                             current_state = STATE_HOUSE
@@ -650,7 +721,6 @@ while running:
                             player_pos.y += 20
                         continue
 
-                    # Zbieranie i interakcje z poszlakami w wiosce
                     elif c_code == "CLUE_TOTEM": 
                         clues_found["znaleziono_totem"] = True
                         c_code = "LEAVE"
@@ -726,7 +796,6 @@ while running:
                         current_state = STATE_TRANSITION
                         continue
                     
-                    # LOGIKA NPC W LESIE
                     elif c_code == "INFO_LATARNIK":
                         dialogue_title = "Wiedza Demona Pnia"
                         dialogue_lines = ["Pień: Na tym piętrze lasu ukrywa się Latarnik.", "Jego latarnia z głowy chochlika wybudzi samego Krzykacza!"]
@@ -758,7 +827,6 @@ while running:
                         current_choice_idx = 0
                         continue
 
-                    # ZWERBOWANIE LUSI
                     elif c_code == "RECRUIT_LUSIA":
                         clues_found["wspolpraca_z_lusia"] = True
                         dialogue_title = "Pomoc Patronki"
@@ -767,7 +835,6 @@ while running:
                         current_choice_idx = 0
                         continue
 
-                    # WALKI Z NPC
                     elif c_code == "START_GENERIC_FIGHT":
                         current_state = STATE_COMBAT
                         boss_hp = boss_max_hp = 150
@@ -789,7 +856,6 @@ while running:
                         latarnik_fatigue = 0
                         boss_hp = boss_max_hp = 200
                         
-                        # Obliczanie kar i bonusów
                         boss_mod_attack = -2 if clues_found["ma_amulet_zielarki"] else 2
                         mod_attack = 0 if clues_found["wspolpraca_z_lusia"] else -2
 
@@ -797,7 +863,6 @@ while running:
                         combat_projectiles.clear()
                         continue
 
-                    # DECYZJE Z MAMUNĄ I PRZEJŚCIE DO JĄDRA LASU
                     elif c_code == "FIGHT_MAMUNA":
                         current_state = STATE_COMBAT
                         active_boss_type = BOSS_MAMUNA
@@ -823,7 +888,6 @@ while running:
                         player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 50)
                         continue
 
-                    # LOGIKA JĄDRA LASU (Wywód Drzewa, Drwale i Krzykacz)
                     elif c_code == "TALK_TO_TREE":
                         dialogue_title = "Rozmowa z Duchem Lasu"
                         dialogue_lines = [
@@ -936,7 +1000,6 @@ while running:
         screen.fill((10, 12, 15)) 
         for i in range(12): draw_tree(screen, 30 + i*80, HEIGHT - 300)
         
-        # Zwiększono obszar tła tekstowego, aby pomieścił zawijany tekst
         pygame.draw.rect(screen, (25, 25, 30), (0, HEIGHT - 200, WIDTH, 200))
         
         zuk_x = -200 + (anim_tick * 2.5)
@@ -947,7 +1010,6 @@ while running:
         bg_bar.fill((0, 0, 0, 200))
         screen.blit(bg_bar, (0, HEIGHT - 200))
         
-        # Użycie funkcji word-wrapping dla Intro
         title_text = intro_sequence[intro_step]["title"]
         main_text = intro_sequence[intro_step]["text"]
         
@@ -1007,7 +1069,6 @@ while running:
             
             combined_dialogue = " ".join(dialogue_lines)
 
-            # Rysowanie avatara
             avatar_x, avatar_y = 90, HEIGHT - 210
             if "Sołtys" in dialogue_title:
                 draw_soltys(screen, avatar_x, avatar_y)
@@ -1019,7 +1080,6 @@ while running:
                 else:
                     draw_ksiadz(screen, avatar_x, avatar_y)
             
-            # Dynamiczne ustalanie pozycji i renderowanie zawijanego tekstu (przesunięto x na 140)
             current_y = HEIGHT - 230
             current_y += draw_text_wrapped(screen, dialogue_title, font_title, (200, 180, 150), 140, current_y, WIDTH - 200) + 10
             
@@ -1082,7 +1142,6 @@ while running:
 
     elif current_state == STATE_END:
         screen.fill((0, 0, 0))
-        # Użycie funkcji word-wrapping dla tekstu końcowego
         draw_text_wrapped(screen, end_message, font_title, (200, 50, 50), WIDTH//2 - 350, HEIGHT//2 - 100, 700)
         screen.blit(font_sub.render("[ESC] - Wyjście", True, (100,100,100)), (WIDTH//2 - 50, HEIGHT - 50))
 
