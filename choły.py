@@ -253,8 +253,49 @@ def draw_maria(surface, x, y):
     pygame.draw.circle(surface, C_BLACK, (x + 5, y - 10), 3)
     pygame.draw.circle(surface, C_LIGHT, (x + 6, y - 10), 1)
 
-# Architektura jako ponure, ostre bryły
-# ... (reszta kodu bez zmian)
+def draw_szef_drwali(surface, x, y):
+    # Masywny, nienaturalnie kanciasty kark i bary
+    pygame.draw.polygon(surface, C_DARK, [(x-20, y+25), (x+20, y+25), (x+15, y-5), (x-15, y-5)])
+    # Twarz o brutalnych, wyciosanych jak z drewna rysach
+    pygame.draw.polygon(surface, C_LIGHT, [(x-10, y-15), (x+10, y-18), (x+12, y), (x-8, y+5)])
+    # Potężny, brudny zarost maskujący dół twarzy (brak widocznych ust)
+    pygame.draw.polygon(surface, C_BLACK, [(x-8, y-2), (x+12, y-4), (x+10, y+5), (x-6, y+7)])
+    # Przerażające, wściekłe spojrzenie (jedno oko mniejsze, drugie szeroko otwarte)
+    pygame.draw.circle(surface, C_RED, (x-4, y-10), 2)
+    pygame.draw.line(surface, C_BLACK, (x+4, y-12), (x+8, y-8), 2) # Blizna / ślepe oko
+    # Ostrze ciężkiej, topornej siekiery oparte o ramię
+    pygame.draw.polygon(surface, C_GRAY, [(x+12, y+5), (x+25, y+2), (x+22, y+18)])
+    pygame.draw.line(surface, C_RED, (x+25, y+2), (x+22, y+10), 2) # Ślady krwi lub rdzy
+
+def draw_sprzedawca(surface, x, y):
+    # Wychudzona sylwetka, skulona i wtapiająca się w ciemność sklepu
+    pygame.draw.polygon(surface, C_BLACK, [(x-15, y+25), (x+10, y+25), (x+5, y), (x-10, y-5)])
+    # Twarz jak wykrzywiona, trupia czaszka
+    pygame.draw.polygon(surface, C_LIGHT, [(x-8, y-10), (x+6, y-15), (x+4, y+5), (x-6, y+2)])
+    # Nienaturalnie szeroki, asymetryczny uśmiech "od ucha do ucha"
+    pygame.draw.line(surface, C_BLACK, (x-5, y), (x+5, y-5), 2)
+    pygame.draw.line(surface, C_DARK, (x-5, y+1), (x+3, y-4), 1)
+    # Wielkie, całkowicie puste oczodoły
+    pygame.draw.circle(surface, C_BLACK, (x-3, y-6), 3)
+    pygame.draw.circle(surface, C_BLACK, (x+4, y-8), 2)
+    pygame.draw.circle(surface, C_RED, (x-3, y-6), 1) # Maleńki błysk szaleństwa
+    # Rzadkie, przylizane i sterczące włosy
+    pygame.draw.line(surface, C_DARK, (x-8, y-10), (x+2, y-15), 2)
+    pygame.draw.line(surface, C_BLACK, (x-4, y-12), (x, y-18), 1)
+
+def draw_menel(surface, x, y):
+    # Bezkształtna, wrakowata masa (postać mocno zgarbiona, opadająca)
+    pygame.draw.polygon(surface, C_GRAY, [(x-18, y+25), (x+15, y+25), (x+5, y+5), (x-12, y+10)])
+    pygame.draw.polygon(surface, C_DARK, [(x-15, y+25), (x+5, y+25), (x-2, y+5)])
+    # Twarz opadająca, zapadnięta, asymetryczna
+    pygame.draw.rect(surface, C_LIGHT, (x-8, y-5, 12, 14))
+    pygame.draw.polygon(surface, C_BLACK, [(x-8, y+2), (x+4, y+9), (x-4, y+9)]) # Brudna żuchwa
+    # Mętne, czerwone oczy zniszczone alkoholem i obłędem
+    pygame.draw.circle(surface, C_RED, (x-4, y-1), 1)
+    pygame.draw.circle(surface, C_RED, (x+2, y-2), 1)
+    # Mocno ściskana butelka taniego wina
+    pygame.draw.rect(surface, C_BLACK, (x+8, y+15, 6, 10))
+    pygame.draw.line(surface, C_LIGHT, (x+10, y+15), (x+10, y+25), 1) # Refleks na szkle
 
 # Architektura jako ponure, ostre bryły
 def draw_slavic_house(surface, x, y, width, height, roof_color=None, ruined=False):
@@ -281,11 +322,14 @@ def draw_slavic_house(surface, x, y, width, height, roof_color=None, ruined=Fals
     pygame.draw.rect(surface, C_BLACK, (x + width//2 - 8, y + height - 16, 14, 16))
 
 def draw_tree(surface, x, y):
-    # Ostre, niepokojące trójkąty puszczy
-    pygame.draw.polygon(surface, C_DARK, [(x, y - 30), (x - 12, y + 5), (x + 12, y + 5)])
-    pygame.draw.polygon(surface, C_BLACK, [(x, y - 20), (x - 8, y + 5), (x + 8, y + 5)])
-    pygame.draw.polygon(surface, C_DARK, [(x - 8, y - 15), (x - 18, y + 2), (x - 2, y + 2)])
-    pygame.draw.polygon(surface, C_DARK, [(x + 8, y - 18), (x + 18, y + 2), (x + 2, y + 2)])
+    # Wykrzywiony pień przypominający zgarbiony kręgosłup
+    pygame.draw.polygon(surface, C_BLACK, [(x-2, y+5), (x+3, y+5), (x+5, y-15), (x-4, y-15)])
+    # Ostre, niesymetryczne, pęknięte korony (wyglądające jak drapieżne szpony)
+    pygame.draw.polygon(surface, C_DARK, [(x, y - 35), (x - 12, y - 5), (x + 8, y - 10)])
+    pygame.draw.polygon(surface, C_BLACK, [(x - 5, y - 25), (x - 15, y + 2), (x + 14, y - 2)])
+    # Poszarpane, martwe gałęzie wystające z mroku jak chude palce
+    pygame.draw.line(surface, C_DARK, (x+2, y-12), (x+14, y-20), 2)
+    pygame.draw.line(surface, C_BLACK, (x-2, y-20), (x-16, y-28), 1)
 
 def draw_well(surface, x, y):
     pygame.draw.rect(surface, C_DARK, (x - 6, y - 4, 12, 8))
@@ -429,17 +473,43 @@ def draw_lesny_dziadek(surface, x, y):
     pygame.draw.rect(surface, C_BLACK, (x-8, y-18, 16, 4))
 
 def draw_wielkie_drzewo(surface, x, y):
-    pygame.draw.rect(surface, C_DARK, (x - 30, y, 60, 100))
-    pygame.draw.polygon(surface, C_BLACK, [(x, y - 60), (x - 80, y + 20), (x + 80, y + 20)])
-    pygame.draw.polygon(surface, C_DARK, [(x, y - 80), (x - 60, y + 10), (x + 60, y + 10)])
-
+    # Masywny, poskręcany pień wyglądający jak splecione, gnijące cielska
+    pygame.draw.polygon(surface, C_DARK, [(x-25, y+30), (x+35, y+20), (x+20, y-60), (x-30, y-50)])
+    pygame.draw.polygon(surface, C_BLACK, [(x-15, y+25), (x+15, y+15), (x+5, y-80), (x-10, y-75)])
+    # Ciernie, macki i pnącza pulsujące wokół pnia
+    pygame.draw.line(surface, C_BLACK, (x-20, y-10), (x+25, y-40), 3)
+    pygame.draw.line(surface, C_GRAY, (x+15, y+5), (x-10, y-50), 2)
+    # Upiorna wyrwa w drewnie - bezoczna "twarz" krzyczącego drzewa
+    pygame.draw.ellipse(surface, C_BLACK, (x-5, y-30, 12, 18))
+    pygame.draw.circle(surface, C_RED, (x-2, y-25), 2)
+    pygame.draw.circle(surface, C_RED, (x+2, y-23), 1)
+    # Rozłożysta, tnąca jak połamane ostrza korona
+    pygame.draw.polygon(surface, C_DARK, [(x-10, y-70), (x-90, y-20), (x-30, y-100)])
+    pygame.draw.polygon(surface, C_BLACK, [(x+10, y-65), (x+80, y-10), (x+40, y-110)])
+    pygame.draw.polygon(surface, C_DARK, [(x-5, y-90), (x-40, y-130), (x+50, y-120)])
 def draw_zuk(surface, x, y, light=True):
     if light:
-        pygame.draw.polygon(surface, (C_LIGHT[0], C_LIGHT[1], C_LIGHT[2], 80), [(x+15, y), (x+80, y-15), (x+80, y+15)])
-    pygame.draw.rect(surface, C_DARK, (x, y - 8, 20, 12))
-    pygame.draw.rect(surface, C_GRAY, (x + 12, y - 6, 4, 4)) 
-    pygame.draw.circle(surface, C_BLACK, (x + 4, y + 4), 3)
-    pygame.draw.circle(surface, C_BLACK, (x + 16, y + 4), 3)
+        # Upiorne, asymetryczne światło przedzierające się przez gęstą mgłę
+        pygame.draw.polygon(surface, (C_LIGHT[0], C_LIGHT[1], C_LIGHT[2], 50), [(x+10, y-2), (x+90, y-20), (x+70, y+25)])
+        pygame.draw.polygon(surface, (C_LIGHT[0], C_LIGHT[1], C_LIGHT[2], 80), [(x+15, y+2), (x+85, y-10), (x+80, y+15)])
+    
+    # Zardzewiała, wgnieciona i mocno przekrzywiona karoseria
+    pygame.draw.polygon(surface, C_DARK, [(x-2, y-10), (x+18, y-12), (x+22, y+2), (x-4, y+4)])
+    # Rozbita, zapadnięta w mrok szyba
+    pygame.draw.polygon(surface, C_BLACK, [(x+10, y-8), (x+16, y-10), (x+18, y-4), (x+12, y-2)])
+    # Pojedyncze, wyraźne pęknięcie na szybie przypominające bliznę
+    pygame.draw.line(surface, C_GRAY, (x+14, y-8), (x+16, y-4), 1)
+    
+    # Krzywe osie, opony ciężko wbijające się w błoto
+    pygame.draw.rect(surface, C_BLACK, (x-1, y+1, 6, 5))
+    pygame.draw.rect(surface, C_BLACK, (x+14, y, 5, 6))
+    
+    # Reflektory - jeden całkowicie rozbity, drugi świecący mdłym światłem
+    pygame.draw.circle(surface, C_GRAY, (x+18, y-2), 2)
+    if light:
+        pygame.draw.circle(surface, C_LIGHT, (x+18, y+2), 2)
+    else:
+        pygame.draw.circle(surface, C_BLACK, (x+18, y+2), 2)
 
 
 def draw_text_wrapped(surface, text, font, color, x, y, max_width):
@@ -1031,6 +1101,15 @@ while running:
                     if len(dialogue_choices) > 0: current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
                 elif event.key in [pygame.K_RETURN, pygame.K_e, pygame.K_SPACE] or c_code:
                     if not c_code and len(dialogue_choices) > 0: c_code = dialogue_choices[current_choice_idx][1]
+
+                    # Ostre portrety na UI
+            if "Sołtys" in dialogue_title: draw_soltys(screen, avatar_x, avatar_y)
+            elif "Zielark" in dialogue_title: draw_zielarka(screen, avatar_x, avatar_y)
+            elif "Plebania" in dialogue_title or "Maciek" in combined_dialogue: draw_maciek(screen, avatar_x, avatar_y)
+            elif "Choroszcz" in dialogue_title or "Maria" in combined_dialogue: draw_maria(screen, avatar_x, avatar_y)
+            elif "Drwal" in dialogue_title or "Drwal" in combined_dialogue: draw_szef_drwali(screen, avatar_x, avatar_y)
+            elif "Sklep" in dialogue_title or "Sprzedawca" in combined_dialogue: draw_sprzedawca(screen, avatar_x, avatar_y)
+            elif "Menel" in dialogue_title or "Menel" in combined_dialogue: draw_menel(screen, avatar_x, avatar_y)
                     
                     if c_code == "LEAVE":
                         if current_map == "VILLAGE":
