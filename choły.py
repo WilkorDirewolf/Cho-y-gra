@@ -683,6 +683,40 @@ intro_sequence = [
 ]
 intro_step = 0
 
+from collections import defaultdict
+
+# --- BRAKUJĄCE ZMIENNE INICJALIZACYJNE ---
+# Drzewa na mapach
+decorations_trees = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(15)]
+forest_trees = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(35)]
+
+# Statystyki gracza i ekwipunek
+player_agility = 5
+player_charisma = 5
+clues_found = defaultdict(bool) # Zapobiega błędom, gdy gra szuka poszlaki, której jeszcze nie ma
+
+# Prosta klasa budynków, by obsłużyć kolizje i wejścia
+class BasicHouse:
+    def __init__(self, x, y, name, w=150, h=100, ruined=False):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.door_rect = pygame.Rect(x + 20, y + h - 40, 40, 40)
+        self.name = name
+        self.roof_color = None
+        self.ruined = ruined
+    def dialog_func(self):
+        return "Zamknięte na głucho.", [("Odejdź", "LEAVE")]
+
+houses = [
+    BasicHouse(150, 150, "Dom Sołtysa"),
+    BasicHouse(450, 250, "Wóz (Żuk)"),
+    BasicHouse(600, 100, "Spalona Chata", ruined=True)
+]
+
+monster_triggers_forest = [
+    {"rect": pygame.Rect(200, 200, 80, 80), "type": BOSS_LATARNIK, "beaten": False},
+    {"rect": pygame.Rect(400, 400, 80, 80), "type": BOSS_MAMUNA, "beaten": False}
+]
+
 # --- GŁÓWNA PĘTLA ---
 running = True
 while running:
@@ -1589,19 +1623,26 @@ while running:
         game_surface.fill(C_BLACK)
         
         if intro_step == 0:
-            pygame.draw.rect(game_surface, C_DARK, (0, LOW_H-S(120), LOW_W, S(120))) 
-            pygame.draw.circle(game_surface, C_BLACK, (S(180), LOW_H-S(40)), S(70), S(12)) 
-            pygame.draw.circle(game_surface, C_VOID, (S(180), LOW_H-S(40)), S(20)) 
-            for _ in range(40):
-                rx, ry = random.randint(0, LOW_W), random.randint(0, LOW_H-S(120))
-                pygame.draw.line(game_surface, C_GRAY, (rx, ry), (rx-S(8), ry+S(20)), 2)
-            wx1 = S(150) + int(math.sin(anim_tick * 0.1) * S(50))
-            wx2 = S(400) + int(math.sin(anim_tick * 0.1) * S(50))
-            pygame.draw.line(game_surface, C_BLACK, (S(150), LOW_H-S(120)), (wx1, LOW_H-S(200)), S(5))
-            pygame.draw.line(game_surface, C_BLACK, (S(400), LOW_H-S(120)), (wx2, LOW_H-S(200)), S(5))
+            # Mijane drzewa symulujące jazdę w nocy
+            for i in range(15): 
+                tx = S((i*150 - anim_tick*6) % (WIDTH + 300) - 150)
+                draw_tree(game_surface, tx, LOW_H - S(120))
+            
+            # Nasz jadący Żuk na środku ekranu
+            draw_zuk(game_surface, S(WIDTH // 2), LOW_H - S(80), light=True)
+            
+            # Ostry deszcz zacinający na wietrze
+            for _ in range(60):
+                rx, ry = random.randint(0, LOW_W), random.randint(0, LOW_H)
+                pygame.draw.line(game_surface, C_GRAY, (rx, ry), (rx - S(15), ry + S(35)), 1)
+                
         elif intro_step == 1:
-            for i in range(12): draw_tree(game_surface, S(30 + i*100 * SCALE_F), LOW_H - S(150))
-            draw_zuk(game_surface, S((anim_tick * 2.5) % WIDTH), LOW_H - S(100), light=True)
+            # Żuk dociera do Chołów i parkuje
+            for i in range(12): 
+                draw_tree(game_surface, S(30 + i*100 * SCALE_F), LOW_H - S(150))
+            
+            # Samochód stoi w wiosce, a światła mrugają (uszkodzona instalacja)
+            draw_zuk(game_surface, S(WIDTH // 2), LOW_H - S(100), light=(anim_tick % 60 < 40))
             
         apply_atmosphere(game_surface)
         screen.blit(pygame.transform.scale(game_surface, (WIDTH, HEIGHT)), (0, 0))
