@@ -104,7 +104,8 @@ def generate_slavic_theme():
     track += bass_track
     track = np.clip(track, -1.0, 1.0)
     track_16bit = np.int16(track * 32767)
-    return np.column_stack((track_16bit, track_16bit))
+    # ZABEZPIECZENIE NUMPY CONTIGUOUS:
+    return np.ascontiguousarray(np.column_stack((track_16bit, track_16bit)))
 
 def generate_barka_theme():
     sample_rate = 44100
@@ -137,7 +138,8 @@ def generate_barka_theme():
         current_sample += samples
     track = np.clip(track, -1.0, 1.0)
     track_16bit = np.int16(track * 32767)
-    return np.column_stack((track_16bit, track_16bit))
+    # ZABEZPIECZENIE NUMPY CONTIGUOUS:
+    return np.ascontiguousarray(np.column_stack((track_16bit, track_16bit)))
 
 print("Generowanie skocznej, folkowej ścieżki dźwiękowej...")
 audio_data = generate_slavic_theme()
@@ -597,7 +599,7 @@ houses = [
     House(420, 240, 80, 100, "Stara Kapliczka", get_kapliczka_dialogue, roof_color=(80, 80, 90)),
     House(360, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue, roof_color=(60, 70, 50)),
     House(780, 480, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, roof_color=(80, 100, 110)),
-    House(540, 400, 130, 90, "Sklep 'Słodycze Wina'", get_sklep_dialogue, roof_color=(130, 50, 50)) # DODANY SKLEP
+    House(540, 400, 130, 90, "Sklep 'Słodycze Wina'", get_sklep_dialogue, roof_color=(130, 50, 50))
 ]
 
 decorations_trees = [(40, 260), (50, 500), (360, 180), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
@@ -787,7 +789,12 @@ while running:
                             break
                         elif m["beaten"] == False and active_boss_type not in [BOSS_LATARNIK, BOSS_PIEN, BOSS_GAWRON, BOSS_SKRZEKACZ, BOSS_MAMUNA]:
                             current_state = STATE_DICE_ROLL
-                            boss_hp = boss_max_hp = 100
+                            # ZABEZPIECZENIE: Generowanie rzutu kością dla bossów nienazwanych w specjalnych rozmowach
+                            p_d1, p_d2 = random.randint(1,6), random.randint(1,6)
+                            m_d1, m_d2 = random.randint(1,6), random.randint(1,6)
+                            mod_attack, mod_stamina = (p_d1 + p_d2) - 6, (p_d1 + p_d2) // 2
+                            boss_mod_attack, boss_mod_stamina = (m_d1 + m_d2) - 6, (m_d1 + m_d2) // 2
+                            boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
                             break
             
             elif current_map == "STRANGE_PLACE":
@@ -842,25 +849,28 @@ while running:
         if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
             combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -10, (255, 255, 255), 4))
 
-        for b in combat_bullets:
+        # ZABEZPIECZENIE NUMER 1: Iteracja po kopii listy [:] aby móc wewnątrz bezpiecznie .remove()
+        for b in combat_bullets[:]:
             b.update()
             target_pos = latarnik_pos if active_boss_type == BOSS_LATARNIK else pygame.Vector2(WIDTH//2, 220)
             if pygame.Vector2(b.x, b.y).distance_to(target_pos) < 45:
                 boss_hp -= max(1, base_attack + mod_attack)
-                combat_bullets.remove(b)
-            elif b.y < 100: combat_bullets.remove(b)
+                if b in combat_bullets: combat_bullets.remove(b)
+            elif b.y < 100: 
+                if b in combat_bullets: combat_bullets.remove(b)
 
-        for p in combat_projectiles:
+        # ZABEZPIECZENIE NUMER 2: Iteracja po kopii listy
+        for p in combat_projectiles[:]:
             p.update()
             if pygame.Vector2(p.x, p.y).distance_to(player_combat_pos) < 20:
                 dmg = max(1, 10 + boss_mod_attack)
                 if active_boss_type == BOSS_TRUE_KRZYKACZ: dmg = 15
                 player_hp -= dmg
-                combat_projectiles.remove(p)
+                if p in combat_projectiles: combat_projectiles.remove(p)
             elif p.x < 0 or p.x > WIDTH or p.y < 0 or p.y > HEIGHT:
                 if active_boss_type == BOSS_LATARNIK and latarnik_fatigue < latarnik_max_fatigue:
                     latarnik_fatigue += 1
-                combat_projectiles.remove(p)
+                if p in combat_projectiles: combat_projectiles.remove(p)
 
         if active_boss_type == BOSS_TRUE_KRZYKACZ and player_hp < player_max_hp / 3:
             end_message = "Krzykacz ryczy przeraźliwie, podnosi cię potężnymi łapami...\nJego kościana szczęka jelenia zamyka się na twojej głowie.\nZostałeś pożarty. (GAME OVER)"
@@ -977,9 +987,12 @@ while running:
 
             elif current_state == STATE_DIALOGUE:
                 if event.key in [pygame.K_w, pygame.K_UP] and not c_code: 
-                    current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
+                    # ZABEZPIECZENIE NUMER 3: Dzielenie przez zero gdy brak opcji dialogowych
+                    if len(dialogue_choices) > 0:
+                        current_choice_idx = (current_choice_idx - 1) % len(dialogue_choices)
                 elif event.key in [pygame.K_s, pygame.K_DOWN] and not c_code: 
-                    current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
+                    if len(dialogue_choices) > 0:
+                        current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
                 elif event.key in [pygame.K_RETURN, pygame.K_e, pygame.K_SPACE] or c_code:
                     if not c_code and len(dialogue_choices) > 0:
                         c_code = dialogue_choices[current_choice_idx][1]
@@ -1258,6 +1271,7 @@ while running:
                         current_choice_idx = 0
                         continue
                         
+                    # ZABEZPIECZENIE NUMER 4: Kompletna ścieżka płatności (w tym blokowanie na brak zaufania Sołtysa)
                     elif c_code and c_code.startswith("PAY_"):
                         if player_money >= 5:
                             player_money -= 5
@@ -1265,10 +1279,15 @@ while running:
                                 clues_found["zaufanie_zielarki"] = True
                                 dialogue_title = "Wiedza kupiona"
                                 dialogue_lines = ["Zielarka chowa monety.", "'Przeszukaj piec w spalonej chacie Marii...'"]
-                                dialogue_choices = [("Ruszaj", "LEAVE")]
-                                current_choice_idx = 0
-                                continue
+                            elif c_code == "PAY_SOLTYS":
+                                clues_found["zaufanie_soltysa"] = True
+                                dialogue_title = "Zaufanie kupione"
+                                dialogue_lines = ["Sołtys łapczywie chowa monety do kieszeni.", "'Dobra miastowy... Idź do Zielarki. Powiedz, że to ja cię przysłałem.'"]
+                            dialogue_choices = [("Ruszaj", "LEAVE")]
+                            current_choice_idx = 0
+                            continue
                         else:
+                            dialogue_title = "Brak Gotówki"
                             dialogue_lines = ["Nie masz wystarczająco złota..."]
                             dialogue_choices = [("Odejdź...", "LEAVE")]
                             current_choice_idx = 0
@@ -1451,6 +1470,7 @@ while running:
                         boss_mod_attack = 0
                         combat_timer = 0
                         combat_projectiles.clear()
+                        combat_bullets.clear()
                         continue
                     
                     elif c_code == "GIVE_AMULET":
@@ -1473,6 +1493,7 @@ while running:
 
                         combat_timer = 0
                         combat_projectiles.clear()
+                        combat_bullets.clear()
                         continue
 
                     elif c_code == "FIGHT_MAMUNA":
@@ -1482,6 +1503,7 @@ while running:
                         boss_mod_attack = 2
                         combat_timer = 0
                         combat_projectiles.clear()
+                        combat_bullets.clear()
                         continue
                         
                     elif c_code == "SPARE_MAMUNA":
@@ -1549,14 +1571,19 @@ while running:
                             boss_mod_attack = 5
                         combat_timer = 0
                         combat_projectiles.clear()
+                        combat_bullets.clear()
                         continue
 
+                    # ZABEZPIECZENIE NUMER 5: Reset fizyki Runnera po porażce/nowej próbie
                     elif c_code == "TREE_FIGHT_DZIADEK":
                         current_state = STATE_RUNNER
                         runner_mode_vines = False
                         runner_dziadek_hp = runner_dziadek_max_hp = 150
                         runner_obstacles.clear()
                         runner_timer = 0
+                        runner_player_vy = 0
+                        runner_player_y = HEIGHT - 150
+                        runner_bolts.clear()
                         continue
 
                     elif c_code == "TREE_LIE_1":
@@ -1577,7 +1604,6 @@ while running:
                             current_choice_idx = 0
                         continue
 
-                    # --- ZMIENIONA ŚCIEŻKA (POWRÓT DO CHOŁÓW) ---
                     elif c_code == "TREE_LIE_2":
                         roll = random.randint(1,6)
                         if roll >= 5:
@@ -1596,7 +1622,6 @@ while running:
                             current_choice_idx = 0
                         continue
 
-                    # --- ZMIENIONA ŚCIEŻKA Z LUSIĄ ---
                     elif c_code == "TREE_LUSIA":
                         roll = random.randint(1,6) + random.randint(1,6) + player_charisma + 2
                         if roll >= 8:
@@ -1625,7 +1650,18 @@ while running:
                         runner_dziadek_hp = runner_dziadek_max_hp = 180
                         runner_obstacles.clear()
                         runner_timer = 0
+                        runner_player_vy = 0
+                        runner_player_y = HEIGHT - 150
+                        runner_bolts.clear()
                         continue
+
+            elif current_state == STATE_DICE_ROLL:
+                if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    current_state = STATE_COMBAT
+                    combat_timer = 0
+                    combat_projectiles.clear()
+                    combat_bullets.clear()
+                    player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 150)
 
             elif current_state == STATE_END:
                 if event.key == pygame.K_ESCAPE: running = False
@@ -1725,16 +1761,29 @@ while running:
                 choice_text = f"> {choice[0]}"
                 current_y += draw_text_wrapped(screen, choice_text, font_main, color, 140, current_y, WIDTH - 200) + 5
 
+        # Pokaż statystyki przed rzutem, jeśli boss to wymusza
+        if current_state == STATE_DICE_ROLL:
+            pygame.draw.rect(screen, (10, 10, 15), (150, 180, WIDTH-300, 350))
+            pygame.draw.rect(screen, (220, 50, 50), (150, 180, WIDTH-300, 350), 3)
+            # Zabezpieczenie przed brakiem nazwy
+            boss_display_name = active_boss_type if active_boss_type else "MROCZNY POMIOT"
+            title = font_main.render(f"ZASADZKA BESTII: {boss_display_name}", True, (255, 50, 50))
+            screen.blit(title, (WIDTH//2 - title.get_width()//2, 210))
+            screen.blit(font_main.render(f"Twój Atak ({mod_attack:+d}), Witalność Bestii ({mod_stamina:+d})", True, (100, 255, 100)), (200, 290))
+            screen.blit(font_main.render("NACIŚNIJ [ENTER], ABY OTWORZYĆ OGIEŃ", True, (255, 255, 255)), (WIDTH//2 - 200, 450))
+
     elif current_state == STATE_COMBAT:
         screen.fill((15, 10, 10))
         pygame.draw.rect(screen, (50, 0, 0), (WIDTH//2 - 100, 50, 200, 20))
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH//2 - 100, 50, 200 * (boss_hp / boss_max_hp), 20))
-        screen.blit(font_title.render(active_boss_type, True, (200, 50, 50)), (WIDTH//2 - 150, 15))
+        boss_display_name = active_boss_type if active_boss_type else "BOS"
+        screen.blit(font_title.render(boss_display_name, True, (200, 50, 50)), (WIDTH//2 - 150, 15))
         
         pygame.draw.rect(screen, (0, 0, 50), (20, HEIGHT - 40, 200, 20))
         pygame.draw.rect(screen, (0, 100, 255), (20, HEIGHT - 40, 200 * (player_hp / player_max_hp), 20))
         
-        if active_boss_type == BOSS_TRUE_KRZYKACZ: 
+        # ZABEZPIECZENIE NUMER 6: Rysowanie Krzykacza dla randomowych starć
+        if active_boss_type == BOSS_TRUE_KRZYKACZ or active_boss_type == BOSS_KRZYKACZ_FOREST: 
             draw_true_krzykacz(screen, WIDTH//2, 220, anim_tick)
         elif active_boss_type == BOSS_LATARNIK:
             draw_monster_latarnik(screen, int(latarnik_pos.x - 15), int(latarnik_pos.y), anim_tick)
