@@ -607,10 +607,16 @@ low_terrain_surface = pygame.Surface((LOW_W, LOW_H))
 low_terrain_surface.fill(C_BLACK)
 for ty in range(0, LOW_H, 10):
     for tx in range(0, LOW_W, 10):
-        if random.random() < 0.2:
-            pygame.draw.rect(low_terrain_surface, C_DARK, (tx, ty, random.randint(2, 6), random.randint(2, 6)))
-        if random.random() < 0.05:
+        # Mroczne plamy brudu/błota
+        if random.random() < 0.25:
+            pygame.draw.rect(low_terrain_surface, C_DARK, (tx, ty, random.randint(3, 8), random.randint(3, 8)))
+        # Pojedyncze kamyki lub uschnięte grzyby
+        if random.random() < 0.08:
             pygame.draw.circle(low_terrain_surface, C_GRAY, (tx + random.randint(2, 8), ty + random.randint(2, 8)), 1)
+        # Uschnięte źdźbła trawy (ostre, pionowe rysy)
+        if random.random() < 0.15:
+            gx, gy = tx + random.randint(0, 10), ty + random.randint(0, 10)
+            pygame.draw.line(low_terrain_surface, C_DARK, (gx, gy), (gx + random.choice([-1, 1]), gy - random.randint(2, 5)))
 
 
 current_state = STATE_INTRO
