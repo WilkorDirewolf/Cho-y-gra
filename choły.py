@@ -436,17 +436,50 @@ clues_found = {
     "klamstwo_zielarka_sukces": False,
     "klamstwo_zielarka_porazka": False,
     "zna_sekretny_schowek": False,
-    "latarnia_odebrana": False, # <--- TUTAJ BRAKOWAŁO PRZECINKA!
+    "latarnia_odebrana": False, 
     "quest_zielarka_zaczety": False,
-    "ma_ksiege_zielarki": False
+    "ma_ksiege_zielarki": False,
+    # --- NOWE FLOKI AKT 2 ---
+    "powrot_do_cholow": False,
+    "drwale_przekonani": False,
+    "ma_bimber": False,
+    "rozmowa_zielarka_smrod": False,
+    "ma_zgnily_grzyb": False,
+    "ma_miksture_smrodu": False
 }
 
+def get_drwale_dialogue():
+    if clues_found.get("drwale_przekonani", False):
+        return ("Obóz drwali jest pusty. Zwinęli sprzęt i uciekli w popłochu.", [("Odejdź", "LEAVE")])
+    
+    choices = [("Odejdź i przemyśl sprawę", "LEAVE")]
+    
+    if clues_found.get("ma_bimber", False):
+        choices.insert(0, ("Daj Szefowi drwali bimber Sołtysa", "DRWALE_BIMBER"))
+    
+    if clues_found.get("ma_miksture_smrodu", False):
+        choices.insert(0, ("Wrzuć miksturę smrodu Zielarki do ich ogniska!", "DRWALE_SMROD"))
+    
+    choices.insert(0, ("Przekonaj ich do wyjazdu groźbami (Test Charyzmy)", "DRWALE_CHARISMA"))
+    
+    return ("Szef Drwali: Czego tu szukasz, miastowy? Urząd z powiatu kazał rżnąć las, to rżniemy! Płacą nam od metra sześciennego, a czas ucieka.", choices)
+
 def get_kapliczka_dialogue():
+    if clues_found.get("rozmowa_zielarka_smrod", False) and not clues_found.get("ma_zgnily_grzyb", False):
+        return ("Pod starą kapliczką rośnie pulsujący, fioletowy Zgniły Grzyb. Obok niego zwija się jadowita żmija!", 
+                [("Spróbuj zabrać grzyb (Test Zręczności)", "TEST_AGILITY_GRZYB"), ("Odejdź", "LEAVE")])
+
     if clues_found["zardzewialy_sztylet"]: return ("Stara kapliczka. Zabrałeś stąd już wszystko.", [("Odejdź", "LEAVE")])
     return ("Pod deskami starej kapliczki znajdujesz przedziwny artefakt...\nTo Zardzewiały Sztylet, emanujący chłodem.", 
             [("Zabierz sztylet", "CLUE_DAGGER"), ("Zostaw go", "LEAVE")])
 
 def get_soltys_dialogue():
+    if clues_found.get("powrot_do_cholow", False):
+        if not clues_found.get("ma_bimber", False):
+            return ("Sołtys: Doktorze! Ci drwale z urzędu sprowadzą na nas gniew lasu! Masz, weź mój najlepszy bimber. Może zaleją robaka i odpuszczą wycinkę.", 
+                    [("Weź bimber", "TAKE_BIMBER"), ("Odejdź", "LEAVE")])
+        return ("Sołtys: Błagam, przegnaj tych drwali, zanim las nas pochłonie!", [("Odejdź", "LEAVE")])
+
     if clues_found["zaufanie_soltysa"]: 
         return ("Sołtys: Idź do Zielarki. Powiedz, że ja cię przysłałem.", [("Odejdź", "LEAVE")])
     
@@ -457,12 +490,21 @@ def get_soltys_dialogue():
     return ("Sołtys: Aha, pan jest tym doktorem z miasta? Będzie pan ludzi leczył? \nDrozd: Jestem doktorem psychologii... \nSołtys: Phiii? Myślałem, że chociaż lekarza nam przysłali, bo starego Fiodora wilki zjadły dokładnie o 21:37... Zostały po nim tylko kremówki.", choices)
 
 def get_zielarka_dialogue():
+    if clues_found.get("powrot_do_cholow", False):
+        if not clues_found.get("rozmowa_zielarka_smrod", False):
+            return ("Zielarka: Wiedziałam, że wrócisz. Drwale z urzędu to problem. Przynieś mi Zgniły Grzyb zza starej kapliczki, a uwarzę ci miksturę smrodu.", 
+                    [("Podejmuję się tego", "START_SMROD_QUEST"), ("Odejdź", "LEAVE")])
+        elif clues_found.get("ma_zgnily_grzyb", False) and not clues_found.get("ma_miksture_smrodu", False):
+            return ("Zielarka: Dawaj go tu! Ugh, ten odór... Gotowe. [ZDOBYTO MIKSTURĘ SMRODU]", 
+                    [("Zabierz słoik", "TAKE_MIKSTURA")])
+        elif clues_found.get("ma_miksture_smrodu", False):
+            return ("Zielarka: Rzuć to w ich ognisko, a pouciekają aż do Warszawy.", [("Odejdź", "LEAVE")])
+
     if clues_found["zaufanie_zielarki"]: 
         if clues_found["ma_amulet_zielarki"]:
             return ("Zielarka: Szukaj w spalonej chacie, głupcze.", [("Odejdź", "LEAVE")])
         return ("Zielarka: Użyj tego Amuletu przeciw demonom... [ZDOBYTO AMULET]", [("Schowaj amulet i odejdź", "CLUE_AMULET")])
     
-    # Obsługa questa po zawalonym teście charyzmy
     if clues_found["quest_zielarka_zaczety"] and not clues_found["zaufanie_zielarki"]:
         if clues_found["ma_ksiege_zielarki"]:
             return ("Zielarka: Widzę, że odzyskałeś moją księgę! Wspaniale.", [("Oddaj księgę i dowiedz się prawdy", "ODDAJ_KSIEGE_ZIELARCE")])
@@ -496,33 +538,26 @@ def get_plebania_dialogue():
     
     choices = [("Wyjdź", "LEAVE")]
     
-    # Dodanie opcji zapytania o księgę, jeśli quest się rozpoczął
     if clues_found["quest_zielarka_zaczety"] and not clues_found["ma_ksiege_zielarki"]:
         choices.insert(0, ("Zielarka przysłała mnie po jej księgę.", "ZAPYTAC_MACKA_O_KSIEGE"))
         
     return ("Przed plebanią siedzi Maciek.\nMaciek: Zostaw mnie... Moje dziecko nie żyje, a żonę zabrali do Choroszczy...", choices)
 
 def get_zuk_dialogue():
-    # Kiedy Mamuna jest już pokonana
     if clues_found.get("mamuna_zalatwiona", False):
         return ("Żuk jest gotowy do drogi. Sprawa z Mamuną została rozwiązana, czas odpocząć w chacie.", [("Odejdź", "LEAVE")])
-        
-    # Kiedy porozmawialiśmy z Marią i znamy prawdę (dodana opcja wyjazdu do lasu)
     if clues_found["wiedza_o_mamunie"]:
         return ("Żuk jest gotowy do drogi, ale najpierw musisz zabić Mamunę w Lesie.", [
             ("Jedź do lasu walczyć z Mamuną", "GO_TO_FOREST"), 
             ("Odejdź", "LEAVE")
         ])
-        
-    # Kiedy mamy upoważnienie na start
     if clues_found["ma_upowaznienie_maciek"]:
         return ("Masz dokumenty od Maćka. Wsiadasz do Żuka, żeby odwiedzić Marię.", [("Jedź do Choroszczy", "GO_CHOROSZCZ"), ("Jeszcze nie", "LEAVE")])
         
-    # Domyślny stan
     return ("Twój stary, wysłużony Żuk. Bez wyraźnego powodu nie ma sensu marnować paliwa.", [("Odejdź", "LEAVE")])
 
 def get_bed_dialogue():
-    if clues_found.get("mamuna_zalatwiona", False):
+    if clues_found.get("mamuna_zalatwiona", False) and not clues_found.get("powrot_do_cholow", False):
         return ("Czujesz dziwny, mroczny niepokój unoszący się nad Chołami...", [("Połóż się spać (Rozpocznij kolejny akt)", "TRIGGER_MOB_EVENT")])
     return ("Twoje posłanie w starej chacie po Mikołaju.", [("Prześpij się (Regeneracja HP i Poczytalności)", "SLEEP"), ("Wyjdź", "LEAVE")])
 
@@ -533,6 +568,7 @@ houses = [
     House(720, 320, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, ruined=True),
     House(60, 480, 150, 130, "Plebania (Maciek)", get_plebania_dialogue, roof_color=(120, 40, 30)),
     House(420, 240, 80, 100, "Stara Kapliczka", get_kapliczka_dialogue, roof_color=(80, 80, 90)),
+    House(360, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue, roof_color=(60, 70, 50)), # <--- NOWA LOKACJA W CHOLACH
     House(780, 480, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, roof_color=(80, 100, 110))
 ]
 
@@ -933,6 +969,80 @@ while running:
                         current_state = STATE_EXPLORE
                         player_pos.x -= 30 
                         continue
+
+                    # --- NOWE ZADANIA I TESTY (AKT 2) ---
+                    elif c_code == "RETURN_TO_VILLAGE_ACT2":
+                        clues_found["powrot_do_cholow"] = True
+                        current_map = "VILLAGE"
+                        current_state = STATE_EXPLORE
+                        player_pos = pygame.Vector2(WIDTH//2, HEIGHT//2)
+                        continue
+
+                    elif c_code == "TAKE_BIMBER":
+                        clues_found["ma_bimber"] = True
+                        dialogue_title = "Otrzymano Przedmiot"
+                        dialogue_lines = ["Zabrałeś butlę mocarnego, pędzonego nocą bimbru od Sołtysa."]
+                        dialogue_choices = [("Schowaj", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "START_SMROD_QUEST":
+                        clues_found["rozmowa_zielarka_smrod"] = True
+                        dialogue_title = "Nowe Zadanie"
+                        dialogue_lines = ["Zielarka uśmiecha się bezzębnie. 'Zgniły Grzyb rośnie w cieniu kapliczki. Uważaj tylko na żmije.'"]
+                        dialogue_choices = [("Ruszaj w drogę", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "TEST_AGILITY_GRZYB":
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_agility
+                        if roll >= 8:
+                            clues_found["ma_zgnily_grzyb"] = True
+                            dialogue_title = "Zręczność: Sukces!"
+                            dialogue_lines = [f"Wynik: {roll}. Błyskawicznie chwytasz grzyb, unikając jadowitych zębów żmii!", "Zdobyłeś śmierdzący składnik."]
+                            dialogue_choices = [("Wróć do Zielarki", "LEAVE")]
+                        else:
+                            player_hp -= 20
+                            clues_found["ma_zgnily_grzyb"] = True
+                            dialogue_title = "Zręczność: Porażka!"
+                            dialogue_lines = [f"Wynik: {roll}. Żmija była szybsza! Zatopiona w nadgarstku zadaje rany (-20 HP).", "Ale udało ci się wyrwać grzyb. Oby było warto."]
+                            dialogue_choices = [("Opatrz rany i odejdź", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "TAKE_MIKSTURA":
+                        clues_found["ma_miksture_smrodu"] = True
+                        dialogue_title = "Mikstura Gotowa"
+                        dialogue_lines = ["Otrzymałeś śmierdzącą, bulgoczącą breję w słoiku. Aż pieką od niej oczy!"]
+                        dialogue_choices = [("Idź do obozu drwali", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "DRWALE_CHARISMA":
+                        roll = random.randint(1, 6) + random.randint(1, 6) + player_charisma
+                        if roll >= 10:
+                            end_message = f"Wynik Charyzmy: {roll} (Sukces!).\nZastraszyłeś drwali opowieściami o potworach i klątwie Chołów!\nZwinęli obóz i wyjechali w panice. Uratowałeś wieś i las przed zniszczeniem.\n(PRAWDZIWE ZAKOŃCZENIE)"
+                            current_state = STATE_END
+                        else:
+                            player_hp -= 15
+                            dialogue_title = "Charyzma: Porażka!"
+                            dialogue_lines = [f"Wynik: {roll}. Szef drwali wyśmiał cię i rzucił w ciebie ciężkim polanem (-15 HP).", "Musisz spróbować innego sposobu... Może zapytaj Sołtysa albo Zielarkę?"]
+                            dialogue_choices = [("Wycofaj się z obozu", "LEAVE")]
+                            current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "DRWALE_BIMBER":
+                        clues_found["drwale_przekonani"] = True
+                        end_message = "Drwale obalili potężny bimber Sołtysa w 15 minut. Po pijaku uwierzyli\nw twoje przerażające opowieści o Krzykaczu i Mamunie.\nRano spakowali sprzęt i odjechali. Uratowałeś Choły i Las!\n(DOBRE ZAKOŃCZENIE)"
+                        current_state = STATE_END
+                        continue
+                        
+                    elif c_code == "DRWALE_SMROD":
+                        clues_found["drwale_przekonani"] = True
+                        end_message = "Wrzuciłeś słoik od Zielarki prosto do ich ogniska. Wybuchł gęsty zielony dym!\nZionęło takim odorem, że drwale uciekli w panice, zostawiając sprzęt!\nUratowałeś Choły, a las pozostanie nietknięty.\n(SPRYTNE ZAKOŃCZENIE)"
+                        current_state = STATE_END
+                        continue
+                    # ------------------------------------
                         
                     elif c_code == "TEST_AGILITY_WINDOW":
                         roll = random.randint(1, 6) + random.randint(1, 6) + player_agility
@@ -1362,7 +1472,7 @@ while running:
                             dialogue_lines = [
                                 "Dziadek zawahał się, ale Duch Lasu wtrąca się:",
                                 "Duch Lasu: 'Czuję kłamstwo. Korzenie mówią co innego. Śledzą nas.'",
-                                "Musisz przekonać Ducha, że masz pewne źródło z Urzędu (Próg: rzuć 6)."
+                                "Musisz przekonać Ducha, że masz pewne źródło z Urzędu (Próg: rzuć 5+)."
                             ]
                             dialogue_choices = [("Spróbuj przekonać Ducha (Rzut 1d6)", "TREE_LIE_2")]
                             current_choice_idx = 0
@@ -1373,11 +1483,18 @@ while running:
                             current_choice_idx = 0
                         continue
 
+                    # --- ZMIENIONA ŚCIEŻKA (POWRÓT DO CHOŁÓW) ---
                     elif c_code == "TREE_LIE_2":
                         roll = random.randint(1,6)
-                        if roll == 6:
-                            end_message = "Wynik: 6! Duch Lasu uwierzył ci, że jesteś ich wtyczką w urzędzie.\nWypuszczenie Krzykacza zostaje opóźnione o 3 dni. Uratowałeś drwali!\n(SUKCES - Koniec Epizodu)"
-                            current_state = STATE_END
+                        if roll >= 5:
+                            dialogue_title = "Odroczenie Wyroku"
+                            dialogue_lines = [
+                                f"Wynik: {roll}! Duch Lasu uwierzył ci, że jesteś wtyczką w urzędzie.",
+                                "Wypuszczenie Krzykacza zostaje opóźnione o 3 dni.",
+                                "Musisz teraz wrócić do Chołów i pozbyć się ekipy drwali, zanim będzie za późno!"
+                            ]
+                            dialogue_choices = [("Wróć szybko do wioski!", "RETURN_TO_VILLAGE_ACT2")]
+                            current_choice_idx = 0
                         else:
                             dialogue_title = "Charyzma (Porażka!)"
                             dialogue_lines = [f"Wynik: {roll}. Duch Lasu oplata cię pnączami! 'KŁAMCA!'"]
@@ -1385,11 +1502,18 @@ while running:
                             current_choice_idx = 0
                         continue
 
+                    # --- ZMIENIONA ŚCIEŻKA Z LUSIĄ ---
                     elif c_code == "TREE_LUSIA":
                         roll = random.randint(1,6) + random.randint(1,6) + player_charisma + 2
                         if roll >= 8:
-                            end_message = f"Wynik z Lusią: {roll}. Lusia staje w twojej obronie.\nOna przekonuje Ducha Lasu, by odroczyć pobudkę Krzykacza o 3 dni.\nPokój, póki co, został zachowany. (SUKCES - Koniec Epizodu)"
-                            current_state = STATE_END
+                            dialogue_title = "Wsparcie Patronki"
+                            dialogue_lines = [
+                                f"Wynik z Lusią: {roll}. Lusia staje w twojej obronie.",
+                                "Przekonuje Ducha Lasu, by odroczyć pobudkę Krzykacza o 3 dni.",
+                                "Musisz powrócić do Chołów i przepędzić stamtąd drwali!"
+                            ]
+                            dialogue_choices = [("Wróć szybko do wioski!", "RETURN_TO_VILLAGE_ACT2")]
+                            current_choice_idx = 0
                         else:
                             dialogue_title = "Zdrada!"
                             dialogue_lines = [
@@ -1550,12 +1674,11 @@ while running:
         for o in runner_obstacles: o.draw(screen)
         for b in runner_bolts: pygame.draw.rect(screen, (200, 200, 200), b)
         
-    # --- DODANY EKRAN KOŃCOWY GRY ---
+    # --- EKRAN KOŃCOWY GRY ---
     elif current_state == STATE_END:
         screen.fill((15, 10, 10))
         draw_text_wrapped(screen, "KONIEC GRY", font_title, (255, 50, 50), WIDTH//2 - 80, HEIGHT//2 - 100, 400)
         draw_text_wrapped(screen, end_message, font_main, (200, 200, 200), WIDTH//2 - 250, HEIGHT//2 - 30, 500)
         screen.blit(font_sub.render("[ESC] - Wyjście", True, (100, 100, 100)), (WIDTH//2 - 50, HEIGHT - 100))
 
-    # --- KLUCZOWA POPRAWKA - BEZ TEGO EKRAN POZOSTAWAŁ CZARNY ---
     pygame.display.flip()
