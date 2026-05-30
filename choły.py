@@ -164,6 +164,32 @@ def draw_zuk(surface, x, y):
     pygame.draw.circle(surface, (255, 255, 200), (x + 138, y + 30), 6)
     pygame.draw.rect(surface, (40, 40, 40), (x + 130, y + 40, 15, 8), border_radius=2)
 
+# --- FUNKCJA ZAWIJANIA TEKSTU ---
+def draw_text_wrapped(surface, text, font, color, x, y, max_width):
+    paragraphs = text.split('\n')
+    y_offset = 0
+    font_height = font.size('Tg')[1]
+    
+    for paragraph in paragraphs:
+        words = paragraph.split(' ')
+        line = []
+        for word in words:
+            test_line = ' '.join(line + [word])
+            width, _ = font.size(test_line)
+            if width <= max_width:
+                line.append(word)
+            else:
+                text_surface = font.render(' '.join(line), True, color)
+                surface.blit(text_surface, (x, y + y_offset))
+                y_offset += font_height + 2
+                line = [word]
+        if line:
+            text_surface = font.render(' '.join(line), True, color)
+            surface.blit(text_surface, (x, y + y_offset))
+            y_offset += font_height + 2
+            
+    return y_offset
+
 class Projectile:
     def __init__(self, x, y, vx, vy, color, radius=5):
         self.x, self.y, self.vx, self.vy, self.color, self.radius = x, y, vx, vy, color, radius
@@ -886,7 +912,9 @@ while running:
     if current_state == STATE_INTRO:
         screen.fill((10, 12, 15)) 
         for i in range(12): draw_tree(screen, 30 + i*80, HEIGHT - 300)
-        pygame.draw.rect(screen, (25, 25, 30), (0, HEIGHT - 150, WIDTH, 150))
+        
+        # Zwiększono obszar tła tekstowego, aby pomieścił zawijany tekst
+        pygame.draw.rect(screen, (25, 25, 30), (0, HEIGHT - 200, WIDTH, 200))
         
         zuk_x = -200 + (anim_tick * 2.5)
         if zuk_x > WIDTH // 2 - 100: zuk_x = WIDTH // 2 - 100
@@ -896,8 +924,14 @@ while running:
         bg_bar.fill((0, 0, 0, 200))
         screen.blit(bg_bar, (0, HEIGHT - 200))
         
-        screen.blit(font_title.render(intro_sequence[intro_step]["title"], True, (180, 200, 180)), (80, HEIGHT - 170))
-        screen.blit(font_main.render(intro_sequence[intro_step]["text"], True, (240, 240, 220)), (80, HEIGHT - 120))
+        # Użycie funkcji word-wrapping dla Intro
+        title_text = intro_sequence[intro_step]["title"]
+        main_text = intro_sequence[intro_step]["text"]
+        
+        y_pos = HEIGHT - 180
+        y_pos += draw_text_wrapped(screen, title_text, font_title, (180, 200, 180), 80, y_pos, WIDTH - 160) + 10
+        draw_text_wrapped(screen, main_text, font_main, (240, 240, 220), 80, y_pos, WIDTH - 160)
+
         screen.blit(font_sub.render("[Spacja / Enter by kontynuować]", True, (120, 120, 120)), (WIDTH - 280, HEIGHT - 40))
             
     elif current_state == STATE_TRANSITION:
@@ -945,14 +979,21 @@ while running:
             draw_drozd(screen, int(player_pos.x), int(player_pos.y))
 
         if current_state == STATE_DIALOGUE:
-            pygame.draw.rect(screen, (20, 20, 25), (40, HEIGHT - 220, WIDTH - 80, 200), border_radius=10)
-            pygame.draw.rect(screen, (150, 140, 120), (40, HEIGHT - 220, WIDTH - 80, 200), 2, border_radius=10)
-            screen.blit(font_title.render(dialogue_title, True, (200, 180, 150)), (60, HEIGHT - 200))
-            for idx, line in enumerate(dialogue_lines):
-                screen.blit(font_main.render(line, True, (220, 220, 220)), (60, HEIGHT - 160 + idx * 25))
+            # Zwiększono obszar ramki dla dialogów
+            pygame.draw.rect(screen, (20, 20, 25), (40, HEIGHT - 250, WIDTH - 80, 230), border_radius=10)
+            pygame.draw.rect(screen, (150, 140, 120), (40, HEIGHT - 250, WIDTH - 80, 230), 2, border_radius=10)
+            
+            # Dynamiczne ustalanie pozycji i renderowanie zawijanego tekstu
+            current_y = HEIGHT - 230
+            current_y += draw_text_wrapped(screen, dialogue_title, font_title, (200, 180, 150), 60, current_y, WIDTH - 120) + 10
+            
+            combined_dialogue = " ".join(dialogue_lines)
+            current_y += draw_text_wrapped(screen, combined_dialogue, font_main, (220, 220, 220), 60, current_y, WIDTH - 120) + 15
+            
             for idx, choice in enumerate(dialogue_choices):
                 color = (255, 200, 50) if idx == current_choice_idx else (150, 150, 150)
-                screen.blit(font_main.render(f"> {choice[0]}", True, color), (60, HEIGHT - 70 + idx * 25))
+                choice_text = f"> {choice[0]}"
+                current_y += draw_text_wrapped(screen, choice_text, font_main, color, 60, current_y, WIDTH - 120) + 5
 
     elif current_state == STATE_COMBAT:
         screen.fill((15, 10, 10))
@@ -1006,8 +1047,8 @@ while running:
 
     elif current_state == STATE_END:
         screen.fill((0, 0, 0))
-        for idx, l in enumerate(end_message.split('\n')):
-            screen.blit(font_title.render(l, True, (200, 50, 50)), (WIDTH//2 - 400, HEIGHT//2 - 50 + idx*40))
+        # Użycie funkcji word-wrapping dla tekstu końcowego
+        draw_text_wrapped(screen, end_message, font_title, (200, 50, 50), WIDTH//2 - 350, HEIGHT//2 - 100, 700)
         screen.blit(font_sub.render("[ESC] - Wyjście", True, (100,100,100)), (WIDTH//2 - 50, HEIGHT - 50))
 
     pygame.display.flip()
