@@ -16,22 +16,34 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Mroczna Baśń")
 clock = pygame.time.Clock()
 
-# --- PROCEDURALNY GENERATOR MUZYKI (Słowiański Folk) ---
+# --- PROCEDURALNY GENERATOR MUZYKI (Skoczny Słowiański Folk) ---
 def generate_slavic_theme():
     sample_rate = 44100
-    # Skala Frygijska dla mrocznego klimatu (A Phrygian)
+    # Skala D-moll - idealna do szybkiej, heroicznej muzyki folkowej
     notes = {
-        'A1': 55.00, 'A2': 110.00, 'Bb2': 116.54, 'C3': 130.81, 'D3': 146.83,
-        'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'rest': 0.0
+        'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00,
+        'A3': 220.00, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23,
+        'rest': 0.0
     }
 
-    # Sekwencja melodii: wolna, nieregularna, pełna niepokoju
+    # Szybka, energiczna melodia w stylu wiedźmińskiej walki (rytmiczne szarpanie i uderzenia)
     melody = [
-        ('A2', 1.5), ('Bb2', 0.5), ('A2', 1.0), ('C3', 1.0),
-        ('E3', 2.0), ('F3', 0.5), ('E3', 1.5), ('D3', 1.0),
-        ('A2', 1.0), ('Bb2', 0.5), ('A2', 0.5), ('F3', 1.0), ('E3', 1.0),
-        ('C3', 1.0), ('Bb2', 1.0), ('A2', 3.0), ('rest', 1.0)
+        # Takt 1
+        ('D4', 0.2), ('D4', 0.2), ('F4', 0.2), ('E4', 0.2), 
+        ('D4', 0.2), ('C4', 0.2), ('A3', 0.4),
+        # Takt 2
+        ('D4', 0.2), ('D4', 0.2), ('F4', 0.2), ('E4', 0.2), 
+        ('G3', 0.2), ('A3', 0.2), ('D3', 0.4),
+        # Takt 3
+        ('F4', 0.2), ('E4', 0.2), ('D4', 0.2), ('C4', 0.2), 
+        ('D4', 0.1), ('E4', 0.1), ('F4', 0.2), ('A3', 0.4),
+        # Takt 4
+        ('C4', 0.2), ('A3', 0.2), ('G3', 0.2), ('F3', 0.2), 
+        ('E3', 0.2), ('C4', 0.2), ('D3', 0.4)
     ]
+    
+    # Powtarzamy główny motyw dwukrotnie
+    melody = melody * 2
 
     total_duration = sum(dur for _, dur in melody)
     total_samples = int(sample_rate * total_duration)
@@ -44,35 +56,51 @@ def generate_slavic_theme():
             freq = notes[note_name]
             t = np.linspace(0, duration, samples, False)
             
-            # Lekkie, "pijane" wibrato nadające niepokój
-            vibrato = np.sin(2 * np.pi * 3.5 * t) * (freq * 0.015) 
+            # Instrument: Agresywne ludowe gęśle (połączenie fali piłokształtnej i kwadratowej)
+            wave = 0.5 * (2 * ((t * freq) - np.floor((t * freq) + 0.5))) # Piłokształtna
+            wave += 0.3 * np.sign(np.sin(2 * np.pi * freq * t)) # Kwadratowa
             
-            # Główna fala: połączenie zatkanej sinusoidy i ostrej fali piłokształtnej (brzmi jak lira korbowa)
-            wave = 0.5 * np.sin(2 * np.pi * (freq + vibrato) * t)
-            # Fala piłokształtna w czystym numpy:
-            wave += 0.35 * (2 * ((t * (freq + vibrato)) - np.floor((t * (freq + vibrato)) + 0.5)))
-            
-            # Obwiednia (ADSR) - smyczkowe, wolne narastanie
+            # Obwiednia (ADSR) - ostre, mocne uderzenia smyczkiem i szybkie wytłumienie
             env = np.ones_like(t)
-            attack = min(int(sample_rate * 0.4), samples // 2)
-            release = min(int(sample_rate * 0.6), samples // 2)
-            env[:attack] = np.linspace(0, 1, attack)
-            env[-release:] = np.linspace(1, 0, release)
+            attack = int(sample_rate * 0.015)  # Bardzo szybki atak (szarpnięcie)
+            decay = int(sample_rate * 0.08)
+            release = int(sample_rate * 0.05)
+            
+            if samples > attack + release:
+                env[:attack] = np.linspace(0, 1, attack)
+                env[-release:] = np.linspace(1, 0, release)
+                
+                # Decay nadający ostry, perkusyjny charakter strunom
+                if samples > attack + decay + release:
+                    env[attack:attack+decay] = np.linspace(1, 0.6, decay)
+                    env[attack+decay:-release] = 0.6
 
-            track[current_sample:current_sample+samples] += wave * env * 0.5
+            track[current_sample:current_sample+samples] += wave * env * 0.45
 
         current_sample += samples
 
-    # Głęboki Drone (Ciągły bas na dźwięku A1)
+    # Ścieżka perkusyjna: mocny słowiański bęben ("tupot")
     t_total = np.linspace(0, total_duration, total_samples, False)
-    drone_freq = notes['A1']
+    bass_track = np.zeros(total_samples)
     
-    # Dudnienie (Beating) - dwie częstotliwości przesunięte o 1Hz
-    drone = 0.5 * np.sin(2 * np.pi * drone_freq * t_total)
-    drone += 0.4 * np.sin(2 * np.pi * (drone_freq + 1.0) * t_total)
-    drone += 0.1 * (2 * ((t_total * drone_freq) - np.floor((t_total * drone_freq) + 0.5)))
+    # Wybijamy beat co 0.4 sekundy (podkreśla energię melodii)
+    beat_interval = 0.4
+    num_beats = int(total_duration / beat_interval)
     
-    track += drone * 0.45
+    for i in range(num_beats):
+        beat_start = int(i * beat_interval * sample_rate)
+        beat_end = int(beat_start + 0.15 * sample_rate)
+        if beat_end < total_samples:
+            # Tworzymy symulację bębna poprzez szybki zjazd częstotliwości (kick drum)
+            t_beat = t_total[beat_start:beat_end] - t_total[beat_start]
+            kick_freq = np.linspace(150, 40, len(t_beat))
+            kick = np.sin(2 * np.pi * kick_freq * t_beat)
+            
+            # Zanikający rezonans bębna
+            kick_env = np.linspace(1, 0, len(t_beat)) ** 2
+            bass_track[beat_start:beat_end] += kick * kick_env * 0.9
+
+    track += bass_track
 
     # Zabezpieczenie przed przesterowaniem (Clipping)
     track = np.clip(track, -1.0, 1.0)
@@ -85,12 +113,12 @@ def generate_slavic_theme():
     return stereo_track
 
 # Generowanie i uruchamianie muzyki w tle
-print("Generowanie mrocznej, proceduralnej ścieżki dźwiękowej... (To może potrwać sekundę)")
+print("Generowanie skocznej, folkowej ścieżki dźwiękowej... (To może potrwać sekundę)")
 audio_data = generate_slavic_theme()
 slavic_sound = pygame.sndarray.make_sound(audio_data)
 slavic_sound.set_volume(0.25)
-slavic_sound.play(loops=-1, fade_ms=2000)
-print("Puszcza szepcze...")
+slavic_sound.play(loops=-1, fade_ms=500) # Znacznie szybsze wjechanie muzyki
+print("Zaczynamy słowiański rejwach!")
 
 # --- STANY GRY ---
 STATE_INTRO = "INTRO"
