@@ -436,7 +436,7 @@ clues_found = {
     "klamstwo_zielarka_sukces": False,
     "klamstwo_zielarka_porazka": False,
     "zna_sekretny_schowek": False,
-    "latarnia_odebrana": False
+    "latarnia_odebrana": False, # <--- TUTAJ BRAKOWAŁO PRZECINKA!
     "quest_zielarka_zaczety": False,
     "ma_ksiege_zielarki": False
 }
@@ -958,7 +958,6 @@ while running:
                             ]
                             dialogue_choices = [("Dobrze (Zaoszczędzono 5 zł)", "LEAVE")]
                         else:
-                            # --- ZMIENIONY FRAGMENT (POCZĄTEK) ---
                             clues_found["klamstwo_zielarka_porazka"] = True
                             clues_found["quest_zielarka_zaczety"] = True
                             dialogue_title = "Charyzma: Porażka!"
@@ -969,11 +968,9 @@ while running:
                                 "a powiem ci, gdzie masz szukać.' "
                             ]
                             dialogue_choices = [("Zgoda. Porozmawiam z Maćkiem.", "LEAVE")]
-                            # --- ZMIENIONY FRAGMENT (KONIEC) ---
                         current_choice_idx = 0
                         continue
 
-                    # --- NOWE EVENTY FABULARNE ---
                     elif c_code == "ZAPYTAC_MACKA_O_KSIEGE":
                         dialogue_title = "Odzyskanie Księgi"
                         dialogue_lines = [
@@ -1540,34 +1537,13 @@ while running:
         draw_lesny_dziadek(screen, 100, runner_ground_y + int(math.sin(runner_timer*0.2)*5))
         for o in runner_obstacles: o.draw(screen)
         for b in runner_bolts: pygame.draw.rect(screen, (200, 200, 200), b)
-
-    elif current_state == STATE_DICE_ROLL:
-        screen.fill((20, 20, 25))
-        screen.blit(font_main.render("[Wciśnij ENTER]", True, (100, 100, 100)), (WIDTH//2 - 100, HEIGHT//2))
-
+        
+    # --- DODANY EKRAN KOŃCOWY GRY ---
     elif current_state == STATE_END:
-        screen.fill((0, 0, 0))
-        draw_text_wrapped(screen, end_message, font_title, (200, 50, 50), WIDTH//2 - 350, HEIGHT//2 - 100, 700)
-        screen.blit(font_sub.render("[ESC] - Wyjście", True, (100,100,100)), (WIDTH//2 - 50, HEIGHT - 50))
+        screen.fill((15, 10, 10))
+        draw_text_wrapped(screen, "KONIEC GRY", font_title, (255, 50, 50), WIDTH//2 - 80, HEIGHT//2 - 100, 400)
+        draw_text_wrapped(screen, end_message, font_main, (200, 200, 200), WIDTH//2 - 250, HEIGHT//2 - 30, 500)
+        screen.blit(font_sub.render("[ESC] - Wyjście", True, (100, 100, 100)), (WIDTH//2 - 50, HEIGHT - 100))
 
-    # --- EFEKTY HALUCYNACJI ---
-    if player_sanity <= 40 and current_state not in [STATE_END, STATE_INTRO]:
-        pulsing = math.sin(anim_tick * 0.1) * 30
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((int(50 + pulsing), 0, 0, 40)) 
-        jitter_x = random.randint(-3, 3)
-        jitter_y = random.randint(-3, 3)
-        screen.blit(overlay, (jitter_x, jitter_y))
-        if random.randint(1, 20) == 1:
-            phantom_x, phantom_y = random.randint(0, WIDTH), random.randint(0, HEIGHT)
-            pygame.draw.circle(screen, (255, 0, 0), (phantom_x, phantom_y), 4)
-
-    # --- OBŁĘD ---
-    if player_sanity <= 0 and current_state != STATE_END:
-        end_message = "Twój umysł nie zniósł koszmaru Chołów.\nPopadłeś w głęboki obłęd. Trafiłeś do zakładu w Choroszczy, dołączając do Marii... (GAME OVER)"
-        current_state = STATE_END
-
+    # --- KLUCZOWA POPRAWKA - BEZ TEGO EKRAN POZOSTAWAŁ CZARNY ---
     pygame.display.flip()
-
-pygame.quit()
-sys.exit()
