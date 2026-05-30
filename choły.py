@@ -445,7 +445,9 @@ clues_found = {
     "ma_bimber": False,
     "rozmowa_zielarka_smrod": False,
     "ma_zgnily_grzyb": False,
-    "ma_miksture_smrodu": False
+    "ma_miksture_smrodu": False,
+    "ma_cukierki": False,
+    "ma_tanie_wino": False
 }
 
 def get_drwale_dialogue():
@@ -459,11 +461,14 @@ def get_drwale_dialogue():
     
     if clues_found.get("ma_miksture_smrodu", False):
         choices.insert(0, ("Wrzuć miksturę smrodu Zielarki do ich ogniska!", "DRWALE_SMROD"))
+        
+    if clues_found.get("ma_tanie_wino", False):
+        choices.insert(0, ("Daj Tanie Wino menelom, by przegonili drwali", "DRWALE_MENELE"))
     
     choices.insert(0, ("Przekonaj ich do wyjazdu groźbami (Test Charyzmy)", "DRWALE_CHARISMA"))
     
-    return ("Szef Drwali: Czego tu szukasz, miastowy? Urząd z powiatu kazał rżnąć las, to rżniemy! Płacą nam od metra sześciennego, a czas ucieka.", choices)
-
+    return ("Szef Drwali: Czego tu szukasz? Urząd kazał rżnąć las, to rżniemy! \nNieopodal w krzakach siedzi grupka tutejszych meneli, łypiąc ponuro na drwali.", choices)
+    
 def get_kapliczka_dialogue():
     if clues_found.get("rozmowa_zielarka_smrod", False) and not clues_found.get("ma_zgnily_grzyb", False):
         return ("Pod starą kapliczką rośnie pulsujący, fioletowy Zgniły Grzyb. Obok niego zwija się jadowita żmija!", 
@@ -559,7 +564,29 @@ def get_zuk_dialogue():
 def get_bed_dialogue():
     if clues_found.get("mamuna_zalatwiona", False) and not clues_found.get("powrot_do_cholow", False):
         return ("Czujesz dziwny, mroczny niepokój unoszący się nad Chołami...", [("Połóż się spać (Rozpocznij kolejny akt)", "TRIGGER_MOB_EVENT")])
-    return ("Twoje posłanie w starej chacie po Mikołaju.", [("Prześpij się (Regeneracja HP i Poczytalności)", "SLEEP"), ("Wyjdź", "LEAVE")])
+    
+    choices = [("Prześpij się (Regeneracja HP i Poczytalności)", "SLEEP")]
+    
+    # Interakcje z Lusią w chacie Mikołaja
+    if not clues_found.get("wspolpraca_z_lusia", False):
+        if clues_found.get("ma_cukierki", False):
+            choices.insert(0, ("Daj Lusi cukierki ze sklepu", "LUSIA_GIVE_CANDY"))
+        else:
+            choices.insert(0, ("Porozmawiaj z małą Lusią", "LUSIA_TALK"))
+    else:
+        choices.insert(0, ("Porozmawiaj z Lusią", "LUSIA_TALK_TRUST"))
+        
+    choices.append(("Wyjdź", "LEAVE"))
+    return ("Twoje posłanie w starej chacie po Mikołaju. W kącie kuli się mała, jasnowłosa dziewczynka w niebieskiej sukience - to Lusia.", choices)
+
+def get_sklep_dialogue():
+    choices = [("Wyjdź ze sklepu", "LEAVE")]
+    if not clues_found.get("ma_cukierki", False):
+        choices.insert(0, ("Kup Cukierki Wieloowocowe (5 zł)", "BUY_CANDY"))
+    if not clues_found.get("ma_tanie_wino", False):
+        choices.insert(0, ("Kup Tanie Wino 'Uśmiech Sołtysa' (10 zł)", "BUY_WINE"))
+        
+    return ("Sklep 'Słodycze Wina'. Półki świecą pustkami, ale sprzedawca uśmiecha się szeroko.\nSprzedawca: Czego dusza pragnie, doktorze? Mamy słodkie i mamy gorzkie!", choices)
 
 houses = [
     House(250, 60, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue),
@@ -568,8 +595,9 @@ houses = [
     House(720, 320, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, ruined=True),
     House(60, 480, 150, 130, "Plebania (Maciek)", get_plebania_dialogue, roof_color=(120, 40, 30)),
     House(420, 240, 80, 100, "Stara Kapliczka", get_kapliczka_dialogue, roof_color=(80, 80, 90)),
-    House(360, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue, roof_color=(60, 70, 50)), # <--- NOWA LOKACJA W CHOLACH
-    House(780, 480, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, roof_color=(80, 100, 110))
+    House(360, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue, roof_color=(60, 70, 50)),
+    House(780, 480, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, roof_color=(80, 100, 110)),
+    House(540, 400, 130, 90, "Sklep 'Słodycze Wina'", get_sklep_dialogue, roof_color=(130, 50, 50)) # DODANY SKLEP
 ]
 
 decorations_trees = [(40, 260), (50, 500), (360, 180), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
@@ -1040,6 +1068,72 @@ while running:
                     elif c_code == "DRWALE_SMROD":
                         clues_found["drwale_przekonani"] = True
                         end_message = "Wrzuciłeś słoik od Zielarki prosto do ich ogniska. Wybuchł gęsty zielony dym!\nZionęło takim odorem, że drwale uciekli w panice, zostawiając sprzęt!\nUratowałeś Choły, a las pozostanie nietknięty.\n(SPRYTNE ZAKOŃCZENIE)"
+                        current_state = STATE_END
+                        continue
+
+                    # --- ZADANIA LUSI W CHACIE MIKOŁAJA ---
+                    elif c_code == "LUSIA_TALK":
+                        dialogue_title = "Rozmowa z Lusią"
+                        dialogue_lines = ["Lusia patrzy na ciebie spod byka.", "'Jesteś obcy... Nie ufam ci. Gdybyś przyniósł mi coś słodkiego ze sklepu, to może byśmy pogadali.'"]
+                        dialogue_choices = [("Zostaw ją", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "LUSIA_GIVE_CANDY":
+                        clues_found["wspolpraca_z_lusia"] = True
+                        player_sanity = min(player_max_sanity, player_sanity + 30)
+                        dialogue_title = "Zaufanie Patronki Lasu"
+                        dialogue_lines = ["Lusia chwyta twarde cukierki i uśmiecha się radośnie.", "'Jesteś całkiem fajny, Drozd! Jak las będzie chciał ci zrobić krzywdę, wstawię się za tobą.' (+30 Poczytalności)"]
+                        dialogue_choices = [("Dzięki, Lusia.", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "LUSIA_TALK_TRUST":
+                        dialogue_title = "Rozmowa z Lusią"
+                        dialogue_lines = ["Lusia beztrosko ssie cukierka.", "'Pamiętaj, las cały czas nas słucha... Ale ja słucham lasu.'"]
+                        dialogue_choices = [("Do zobaczenia", "LEAVE")]
+                        current_choice_idx = 0
+                        continue
+                    
+                    # --- OBSŁUGA SKLEPU ---
+                    elif c_code == "BUY_CANDY":
+                        if player_money >= 5:
+                            player_money -= 5
+                            clues_found["ma_cukierki"] = True
+                            dialogue_title = "Zakup"
+                            dialogue_lines = ["Kupiłeś garść twardych jak kamień cukierków wieloowocowych.", "Brzmią jak idealny prezent dla dziecka."]
+                        else:
+                            dialogue_title = "Brak gotówki"
+                            dialogue_lines = ["Sprzedawca: Za darmo to tu można co najwyżej w zęby dostać!"]
+                        dialogue_choices = [("Wróc do sklepu", "RETURN_SKLEP")]
+                        current_choice_idx = 0
+                        continue
+
+                    elif c_code == "BUY_WINE":
+                        if player_money >= 10:
+                            player_money -= 10
+                            clues_found["ma_tanie_wino"] = True
+                            dialogue_title = "Zakup"
+                            dialogue_lines = ["Kupiłeś butelkę mętnego, jabcokowego wina 'Uśmiech Sołtysa'.", "Potężny trunek o wątpliwym bukiecie."]
+                        else:
+                            dialogue_title = "Brak gotówki"
+                            dialogue_lines = ["Sprzedawca: Panie doktorze, na zeszyt nie daję!"]
+                        dialogue_choices = [("Wróc do sklepu", "RETURN_SKLEP")]
+                        current_choice_idx = 0
+                        continue
+                        
+                    elif c_code == "RETURN_SKLEP":
+                        t, c = get_sklep_dialogue()
+                        dialogue_title = "Sklep 'Słodycze Wina'"
+                        dialogue_lines = [t]
+                        dialogue_choices = c
+                        current_choice_idx = 0
+                        continue
+                    
+                    # --- OBSŁUGA MENELI ---
+                    elif c_code == "DRWALE_MENELE":
+                        clues_found["drwale_przekonani"] = True
+                        end_message = "Menele poczuli potężny zew 'Uśmiechu Sołtysa'. Wypili wino na hejnał,\npo czym z dzikim okrzykiem ruszyli do szarży na obóz drwali!\nDrwale, przerażeni furią nietrzeźwych tubylców, uciekli aż do powiatu.\nUratowałeś Choły! (ZAKOŃCZENIE: PATOLOGICZNE WSPARCIE)"
                         current_state = STATE_END
                         continue
                     # ------------------------------------
