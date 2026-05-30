@@ -11,12 +11,12 @@ pygame.mixer.init()
 
 WIDTH, HEIGHT = 950, 700
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Reto Horror Edition")
+pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Retro Horror Edition")
 clock = pygame.time.Clock()
 
 # --- NOWY KIERUNEK ARTYSTYCZNY (HIGH-RES PIXEL ART & PALETA) ---
 SCALE_F = 1.5
-LOW_W, LOW_H = int(WIDTH / SCALE_F), int(HEIGHT / SCALE_F) # Ok. 633x466
+LOW_W, LOW_H = int(WIDTH / SCALE_F), int(HEIGHT / SCALE_F)
 game_surface = pygame.Surface((LOW_W, LOW_H))
 fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
 
@@ -35,65 +35,110 @@ C_BLOOD = (100, 0, 0)
 C_GOLD = (200, 150, 50) 
 C_SKIN = (220, 180, 150)
 
-# --- PROCEDURALNY GENERATOR MUZYKI ---
+# --- ZAAWANSOWANY PROCEDURALNY GENERATOR MUZYKI ---
 def generate_slavic_theme():
     sample_rate = 44100
     notes = {
-        'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00,
-        'A3': 220.00, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23,
-        'rest': 0.0
+        'D3': 146.83, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 
+        'A#3': 233.08, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 
+        'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'rest': 0.0
     }
+
+    # 1. Melodia (Flet - szybsza, nostalgiczna i niepokojąca)
     melody = [
-        ('D4', 0.2), ('D4', 0.2), ('F4', 0.2), ('E4', 0.2), 
-        ('D4', 0.2), ('C4', 0.2), ('A3', 0.4),
-        ('D4', 0.2), ('D4', 0.2), ('F4', 0.2), ('E4', 0.2), 
-        ('G3', 0.2), ('A3', 0.2), ('D3', 0.4),
-        ('F4', 0.2), ('E4', 0.2), ('D4', 0.2), ('C4', 0.2), 
-        ('D4', 0.1), ('E4', 0.1), ('F4', 0.2), ('A3', 0.4),
-        ('C4', 0.2), ('A3', 0.2), ('G3', 0.2), ('F3', 0.2), 
-        ('E3', 0.2), ('C4', 0.2), ('D3', 0.4)
+        ('D4', 0.4), ('F4', 0.2), ('E4', 0.2), ('D4', 0.4), ('A3', 0.4),
+        ('D4', 0.4), ('F4', 0.2), ('G4', 0.2), ('A4', 0.8),
+        ('A4', 0.4), ('G4', 0.2), ('F4', 0.2), ('E4', 0.4), ('C4', 0.4),
+        ('D4', 0.2), ('E4', 0.2), ('F4', 0.2), ('E4', 0.2), ('D4', 0.8)
     ] * 2
 
-    total_samples = sum(int(sample_rate * dur) for _, dur in melody)
-    total_duration = total_samples / sample_rate
-    track = np.zeros(total_samples)
-
+    # 2. Harmonia (Skrzypce - długie, ponure przeciągnięcia)
+    harmony = [
+        ('D3', 1.6), ('F3', 1.6), 
+        ('C4', 1.6), ('D3', 1.6)
+    ] * 2
+    
+    total_duration = sum(dur for _, dur in melody)
+    total_samples = int(sample_rate * total_duration)
+    
+    flute_track = np.zeros(total_samples)
+    violin_track = np.zeros(total_samples)
+    percussion_track = np.zeros(total_samples)
+    
+    # --- Generowanie Fletu ---
     current_sample = 0
-    for note_name, duration in melody:
+    for note, duration in melody:
         samples = int(sample_rate * duration)
-        if note_name != 'rest':
-            freq = notes[note_name]
+        if note != 'rest':
+            freq = notes[note]
             t = np.linspace(0, duration, samples, False)
-            wave = 0.5 * (2 * ((t * freq) - np.floor((t * freq) + 0.5)))
-            wave += 0.3 * np.sign(np.sin(2 * np.pi * freq * t)) 
+            # Flet: sinus + bardzo cichy sinus oktawę wyżej
+            wave = 0.8 * np.sin(2 * np.pi * freq * t) + 0.2 * np.sin(2 * np.pi * (freq * 2) * t)
+            # Tremolo (drżenie głośności)
+            tremolo = 1.0 + 0.15 * np.sin(2 * np.pi * 6 * t)
+            wave *= tremolo
+            
             env = np.ones_like(t)
-            attack, decay, release = int(sample_rate * 0.015), int(sample_rate * 0.08), int(sample_rate * 0.05)
+            attack, release = int(sample_rate * 0.05), int(sample_rate * 0.1)
             if samples > attack + release:
                 env[:attack] = np.linspace(0, 1, attack)
                 env[-release:] = np.linspace(1, 0, release)
-                if samples > attack + decay + release:
-                    env[attack:attack+decay] = np.linspace(1, 0.6, decay)
-                    env[attack+decay:-release] = 0.6
-            track[current_sample:current_sample+samples] += wave * env * 0.45
+            flute_track[current_sample:current_sample+samples] += wave * env * 0.5
         current_sample += samples
 
-    t_total = np.linspace(0, total_duration, total_samples, False)
-    bass_track = np.zeros(total_samples)
+    # --- Generowanie Skrzypiec ---
+    current_sample = 0
+    for note, duration in harmony:
+        samples = int(sample_rate * duration)
+        if note != 'rest':
+            freq = notes[note]
+            t = np.linspace(0, duration, samples, False)
+            # Vibrato: modulacja częstotliwości (około 5 Hz)
+            vibrato = np.sin(2 * np.pi * 5 * t) * 0.015
+            mod_freq = freq * (1 + vibrato)
+            
+            # Fala piłokształtna symulująca smyczek
+            phase = np.cumsum(mod_freq) / sample_rate
+            wave = 2 * (phase - np.floor(phase + 0.5))
+            # Zmiękczanie ostrej piły (prosty filtr dolnoprzepustowy)
+            wave = 0.5 * wave + 0.5 * np.sin(2 * np.pi * mod_freq * t)
+            
+            env = np.ones_like(t)
+            attack, release = int(sample_rate * 0.4), int(sample_rate * 0.6) # Długie wejście smyczka
+            if samples > attack + release:
+                env[:attack] = np.linspace(0, 1, attack)
+                env[-release:] = np.linspace(1, 0, release)
+            violin_track[current_sample:current_sample+samples] += wave * env * 0.4
+        current_sample += samples
+
+    # --- Generowanie Perkusji (Bębny i Grzechotki) ---
     beat_interval = 0.4
     num_beats = int(total_duration / beat_interval)
+    t_total = np.linspace(0, total_duration, total_samples, False)
+    
     for i in range(num_beats):
         beat_start = int(i * beat_interval * sample_rate)
-        beat_end = int(beat_start + 0.15 * sample_rate)
-        if beat_end < total_samples:
-            t_beat = t_total[beat_start:beat_end] - t_total[beat_start]
-            kick_freq = np.linspace(150, 40, len(t_beat))
+        # Szamańska Stopa (Bęben) - mocne tąpnięcia na 1 i 3
+        if i % 2 == 0:
+            beat_end = min(beat_start + int(0.2 * sample_rate), total_samples)
+            t_beat = t_total[:beat_end-beat_start]
+            kick_freq = np.linspace(120, 30, len(t_beat)) # Pitch drop
             kick = np.sin(2 * np.pi * kick_freq * t_beat)
-            kick_env = np.linspace(1, 0, len(t_beat)) ** 2
-            bass_track[beat_start:beat_end] += kick * kick_env * 0.9
+            kick_env = np.exp(-12 * t_beat) # Szybki zanik
+            percussion_track[beat_start:beat_end] += kick * kick_env * 0.9
+        
+        # Grzechotka (Szum) - rytmika na słabsze uderzenia
+        if i % 2 != 0 or i % 4 == 3:
+            shaker_end = min(beat_start + int(0.08 * sample_rate), total_samples)
+            t_shaker = t_total[:shaker_end-beat_start]
+            noise = np.random.uniform(-1, 1, len(t_shaker)) # Biały szum
+            shaker_env = np.exp(-25 * t_shaker)
+            percussion_track[beat_start:shaker_end] += noise * shaker_env * 0.25
 
-    track += bass_track
-    track = np.clip(track, -1.0, 1.0)
-    track_16bit = np.int16(track * 32767)
+    # --- Mixowanie Ścieżek ---
+    final_track = flute_track + violin_track + percussion_track
+    final_track = np.clip(final_track, -1.0, 1.0)
+    track_16bit = np.int16(final_track * 32767)
     return np.ascontiguousarray(np.column_stack((track_16bit, track_16bit)))
 
 def generate_barka_theme():
@@ -127,10 +172,10 @@ def generate_barka_theme():
     track_16bit = np.int16(track * 32767)
     return np.ascontiguousarray(np.column_stack((track_16bit, track_16bit)))
 
-print("Generowanie muzyki...")
+print("Generowanie złożonej, mrocznej ścieżki dźwiękowej...")
 audio_data = generate_slavic_theme()
 slavic_sound = pygame.sndarray.make_sound(audio_data)
-slavic_sound.set_volume(0.2)
+slavic_sound.set_volume(0.3)
 slavic_sound.play(loops=-1, fade_ms=1000)
 
 barka_data = generate_barka_theme()
@@ -163,28 +208,21 @@ def draw_pixel_line(surface, color, start, end, thickness=1):
     pygame.draw.line(surface, color, start, end, int(thickness * SCALE_F))
 
 # ==============================================================================
-# --- NOWY DROZD - LUDZKI PSYCHOLOG ---
+# --- DROZD - LUDZKI PSYCHOLOG ---
 # ==============================================================================
 def draw_drozd(surface, x, y):
-    # Nogi (Ciemne spodnie)
     pygame.draw.rect(surface, (40, 40, 45), (x - S(4), y + S(5), S(3), S(10)))
     pygame.draw.rect(surface, (40, 40, 45), (x + S(1), y + S(5), S(3), S(10)))
-    # Buty
     pygame.draw.rect(surface, (20, 15, 10), (x - S(5), y + S(13), S(4), S(3)))
     pygame.draw.rect(surface, (20, 15, 10), (x + S(1), y + S(13), S(4), S(3)))
-    # Płaszcz (Brązowy prochowiec, charakterystyczny dla detektywów/miastowych)
     pygame.draw.rect(surface, (110, 85, 60), (x - S(6), y - S(5), S(12), S(14)))
-    pygame.draw.rect(surface, (70, 50, 35), (x - S(6), y - S(5), S(12), S(14)), 1) # Obrys płaszcza
-    # Pasek w talii
+    pygame.draw.rect(surface, (70, 50, 35), (x - S(6), y - S(5), S(12), S(14)), 1) 
     pygame.draw.line(surface, (50, 30, 20), (x - S(6), y + S(2)), (x + S(5), y + S(2)), S(2))
-    # Twarz (Ludzka, blada skóra)
     pygame.draw.rect(surface, C_SKIN, (x - S(4), y - S(12), S(8), S(8)))
-    # Włosy (Ciemne, ułożone)
     pygame.draw.rect(surface, (30, 25, 20), (x - S(5), y - S(14), S(10), S(4)))
     pygame.draw.rect(surface, (30, 25, 20), (x - S(5), y - S(12), S(3), S(4)))
-    # Okulary (Odbicie światła na szkle, dodaje mu "inteligenckiego" sznytu)
     pygame.draw.line(surface, (200, 240, 255), (x - S(3), y - S(9)), (x + S(3), y - S(9)), S(2))
-    pygame.draw.line(surface, (50, 50, 50), (x, y - S(10)), (x, y - S(8)), S(1)) # Mostek okularów
+    pygame.draw.line(surface, (50, 50, 50), (x, y - S(10)), (x, y - S(8)), S(1)) 
 
 def draw_lusia(surface, x, y):
     pygame.draw.polygon(surface, C_GRAY, [(x - S(6), y), (x + S(6), y), (x + S(3), y + S(16)), (x - S(3), y + S(16))])
@@ -196,33 +234,28 @@ def draw_lusia(surface, x, y):
     pygame.draw.circle(surface, C_BLACK, (x + S(2), y - S(6)), 1)
 
 # ==============================================================================
-# --- MINI-SPRITE NPC (DLA WNĘTRZ) ---
+# --- MINI-SPRITE NPC ---
 # ==============================================================================
 def draw_npc_soltys(surface, x, y):
-    # Gruba sylwetka w asymetrycznym kaszkiecie
-    pygame.draw.rect(surface, (40, 50, 40), (x-S(8), y-S(5), S(16), S(15))) # Ciało
-    pygame.draw.rect(surface, C_SKIN, (x-S(5), y-S(12), S(10), S(8))) # Głowa
-    pygame.draw.polygon(surface, C_BLACK, [(x-S(7), y-S(14)), (x+S(7), y-S(12)), (x+S(2), y-S(10)), (x-S(6), y-S(11))]) # Kaszkiet
+    pygame.draw.rect(surface, (40, 50, 40), (x-S(8), y-S(5), S(16), S(15))) 
+    pygame.draw.rect(surface, C_SKIN, (x-S(5), y-S(12), S(10), S(8))) 
+    pygame.draw.polygon(surface, C_BLACK, [(x-S(7), y-S(14)), (x+S(7), y-S(12)), (x+S(2), y-S(10)), (x-S(6), y-S(11))])
 
 def draw_npc_zielarka(surface, x, y):
-    # Zgarbiona w łachmanach
     pygame.draw.polygon(surface, (60, 40, 50), [(x, y-S(10)), (x-S(12), y+S(10)), (x+S(10), y+S(10))])
     pygame.draw.rect(surface, C_SKIN, (x-S(4), y-S(14), S(8), S(6)))
-    pygame.draw.polygon(surface, C_GRAY, [(x-S(5), y-S(16)), (x+S(5), y-S(14)), (x, y-S(8))]) # Chusta
+    pygame.draw.polygon(surface, C_GRAY, [(x-S(5), y-S(16)), (x+S(5), y-S(14)), (x, y-S(8))]) 
 
 def draw_npc_maciek(surface, x, y):
-    # Trzymający się za głowę
     pygame.draw.rect(surface, (50, 50, 60), (x-S(6), y-S(5), S(12), S(15)))
     pygame.draw.rect(surface, C_SKIN, (x-S(4), y-S(12), S(8), S(8)))
-    # Ręce na głowie
     pygame.draw.line(surface, C_SKIN, (x-S(6), y), (x-S(5), y-S(10)), S(2))
     pygame.draw.line(surface, C_SKIN, (x+S(6), y), (x+S(5), y-S(10)), S(2))
 
 def draw_npc_sprzedawca(surface, x, y):
-    # Wychudzony, stoi prosto
     pygame.draw.rect(surface, C_VOID, (x-S(4), y-S(5), S(8), S(20)))
-    pygame.draw.rect(surface, C_LIGHT, (x-S(3), y-S(12), S(6), S(8))) # Trupia bladość
-    pygame.draw.line(surface, C_BLACK, (x-S(2), y-S(8)), (x+S(2), y-S(8)), S(1)) # Uśmiech
+    pygame.draw.rect(surface, C_LIGHT, (x-S(3), y-S(12), S(6), S(8))) 
+    pygame.draw.line(surface, C_BLACK, (x-S(2), y-S(8)), (x+S(2), y-S(8)), S(1)) 
 
 # --- ARCHITEKTURA ---
 def draw_slavic_house(surface, x, y, width, height, roof_color=None, ruined=False):
@@ -267,29 +300,18 @@ def draw_well(surface, x, y):
     pygame.draw.polygon(surface, C_BLACK, [(x - w//2 - 4, y - S(35)), (x, y - S(45)), (x + w//2 + 4, y - S(35))], 1)
 
 def draw_zuk(surface, x, y, light=True):
-    # Wyraźniejszy Żuk FSC
     w, h = S(50), S(30)
-    
-    # Baza wozu (zardzewiały brąz)
     body_poly = [(x - w//2, y), (x + w//2, y), (x + w//2, y + h//2), (x - w//2, y + h//2)]
     pygame.draw.polygon(surface, C_BROWN, body_poly)
-    pygame.draw.rect(surface, C_VOID, (x - w//2, y, w, h//2), 2) # Obrys
-    
-    # Kabina (podwyższona)
+    pygame.draw.rect(surface, C_VOID, (x - w//2, y, w, h//2), 2) 
     kabin_poly = [(x - w//4, y), (x - w//4 + S(5), y - S(15)), (x + w//2 - S(5), y - S(15)), (x + w//2, y)]
     pygame.draw.polygon(surface, C_BROWN, kabin_poly)
     pygame.draw.polygon(surface, C_VOID, kabin_poly, 2)
-    
-    # Opony (wyraźne, duże)
     pygame.draw.circle(surface, C_BLACK, (x - w//2 + S(10), y + h//2), S(7))
-    pygame.draw.circle(surface, C_GRAY, (x - w//2 + S(10), y + h//2), S(3)) # Kołpak
+    pygame.draw.circle(surface, C_GRAY, (x - w//2 + S(10), y + h//2), S(3)) 
     pygame.draw.circle(surface, C_BLACK, (x + w//2 - S(10), y + h//2), S(7))
     pygame.draw.circle(surface, C_GRAY, (x + w//2 - S(10), y + h//2), S(3))
-
-    # Szyba z boku kabiny
     pygame.draw.polygon(surface, C_VOID, [(x - w//4 + S(7), y - S(2)), (x - w//4 + S(10), y - S(12)), (x + w//4, y - S(12)), (x + w//4, y - S(2))])
-    
-    # Reflektory na froncie (z prawej strony)
     if light:
         pygame.draw.circle(surface, C_LIGHT, (x + w//2, y + S(5)), S(4))
         light_pos = (S((x + w//2) * SCALE_F), S((y + S(5)) * SCALE_F))
@@ -608,150 +630,6 @@ class RunnerObstacle:
         pygame.draw.rect(surface, color, (S(r.x), S(r.y), S(r.width), S(r.height)))
         pygame.draw.rect(surface, C_BLACK, (S(r.x), S(r.y), S(r.width), S(r.height)), 2)
 
-class House:
-    def __init__(self, x, y, w, h, name, dialog_func, roof_color=None, ruined=False):
-        self.rect = pygame.Rect(x, y, w, h)
-        self.door_rect = pygame.Rect(x + w//2 - 15, y + h - 15, 30, 20)
-        self.name = name
-        self.dialog_func = dialog_func
-        self.roof_color = roof_color
-        self.ruined = ruined
-
-# --- DANE GRACZA I GRY ---
-player_agility = 3    
-player_charisma = 2   
-clues_found = {
-    "znaleziono_totem": False, "zaufanie_soltysa": False, "zaufanie_zielarki": False, 
-    "dowod_kosci": False, "ma_upowaznienie_maciek": False, "wiedza_o_mamunie": False,       
-    "mamuna_rozmowa": False, "mamuna_zalatwiona": False, "ruiny_skarb": False,
-    "z_lusia": False, "spotkal_dziadka": False, "zardzewialy_sztylet": False,
-    "ma_amulet_zielarki": False, "wspolpraca_z_lusia": False, "rozmowa_pien": False,
-    "rozmowa_gawron": False, "rozmowa_skrzekacz": False, "rozmowa_latarnik": False,
-    "podslyszano_soltysa": False, "klamstwo_zielarka_sukces": False, "klamstwo_zielarka_porazka": False,
-    "zna_sekretny_schowek": False, "latarnia_odebrana": False, "quest_zielarka_zaczety": False,
-    "ma_ksiege_zielarki": False, "powrot_do_cholow": False, "drwale_przekonani": False,
-    "ma_bimber": False, "rozmowa_zielarka_smrod": False, "ma_zgnily_grzyb": False,
-    "ma_miksture_smrodu": False, "ma_cukierki": False, "ma_tanie_wino": False
-}
-
-def get_drwale_dialogue():
-    if clues_found.get("drwale_przekonani", False):
-        return ("Obóz drwali jest pusty. Zwinęli sprzęt i uciekli w popłochu.", [("Odejdź", "LEAVE")])
-    choices = [("Odejdź i przemyśl sprawę", "LEAVE")]
-    if clues_found.get("ma_bimber", False): choices.insert(0, ("Daj Szefowi drwali bimber Sołtysa", "DRWALE_BIMBER"))
-    if clues_found.get("ma_miksture_smrodu", False): choices.insert(0, ("Wrzuć miksturę smrodu do ich ogniska!", "DRWALE_SMROD"))
-    if clues_found.get("ma_tanie_wino", False): choices.insert(0, ("Daj Tanie Wino menelom", "DRWALE_MENELE"))
-    choices.insert(0, ("Przekonaj ich do wyjazdu groźbami", "DRWALE_CHARISMA"))
-    return ("Szef Drwali: Czego tu szukasz? Urząd kazał rżnąć las, to rżniemy! \nNieopodal siedzi grupka tutejszych meneli, łypiąc ponuro na drwali.", choices)
-    
-def get_kapliczka_dialogue():
-    if clues_found.get("rozmowa_zielarka_smrod", False) and not clues_found.get("ma_zgnily_grzyb", False):
-        return ("Pod starą kapliczką rośnie pulsujący Zgniły Grzyb. Obok niego zwija się żmija!", 
-                [("Spróbuj zabrać grzyb (Zręczność)", "TEST_AGILITY_GRZYB"), ("Odejdź", "LEAVE")])
-    if clues_found["zardzewialy_sztylet"]: return ("Stara kapliczka. Zabrałeś stąd już wszystko.", [("Odejdź", "LEAVE")])
-    return ("Pod deskami starej kapliczki znajdujesz przedziwny artefakt...\nTo Zardzewiały Sztylet, emanujący chłodem.", 
-            [("Zabierz sztylet", "CLUE_DAGGER"), ("Zostaw go", "LEAVE")])
-
-def get_soltys_dialogue():
-    if clues_found.get("powrot_do_cholow", False):
-        if not clues_found.get("ma_bimber", False):
-            return ("Sołtys: Doktorze! Ci drwale z urzędu sprowadzą na nas gniew lasu! Masz, weź mój bimber.", 
-                    [("Weź bimber", "TAKE_BIMBER"), ("Odejdź", "LEAVE")])
-        return ("Sołtys: Błagam, przegnaj tych drwali!", [("Odejdź", "LEAVE")])
-    if clues_found["zaufanie_soltysa"]: 
-        return ("Sołtys: Idź do Zielarki. Powiedz, że ja cię przysłałem.", [("Odejdź", "LEAVE")])
-    choices = [("Wybacz najście.", "LEAVE")]
-    if clues_found["zardzewialy_sztylet"]: choices.insert(0, ("Znalazłem ten zardzewiały sztylet.", "SHOW_DAGGER"))
-    return ("Sołtys: Aha, pan jest tym doktorem z miasta? Będzie pan leczył? \nDrozd: Psychologii... \nSołtys: Phiii. Myślałem, że chociaż lekarza przysłali.", choices)
-
-def get_zielarka_dialogue():
-    if clues_found.get("powrot_do_cholow", False):
-        if not clues_found.get("rozmowa_zielarka_smrod", False):
-            return ("Zielarka: Drwale to problem. Przynieś mi Zgniły Grzyb spod kapliczki, a uwarzę miksturę smrodu.", 
-                    [("Podejmuję się", "START_SMROD_QUEST"), ("Odejdź", "LEAVE")])
-        elif clues_found.get("ma_zgnily_grzyb", False) and not clues_found.get("ma_miksture_smrodu", False):
-            return ("Zielarka: Dawaj go tu! Ugh, ten odór... Gotowe.", [("Zabierz słoik", "TAKE_MIKSTURA")])
-        elif clues_found.get("ma_miksture_smrodu", False):
-            return ("Zielarka: Rzuć to w ich ognisko.", [("Odejdź", "LEAVE")])
-
-    if clues_found["zaufanie_zielarki"]: 
-        if clues_found["ma_amulet_zielarki"]: return ("Zielarka: Szukaj w spalonej chacie.", [("Odejdź", "LEAVE")])
-        return ("Zielarka: Użyj Amuletu przeciw demonom...", [("Schowaj amulet", "CLUE_AMULET")])
-    
-    if clues_found["quest_zielarka_zaczety"] and not clues_found["zaufanie_zielarki"]:
-        if clues_found["ma_ksiege_zielarki"]: return ("Zielarka: Odzyskałeś moją księgę!", [("Oddaj księgę", "ODDAJ_KSIEGE_ZIELARCE")])
-        else: return ("Zielarka: Bez księgi nie mamy o czym gadać.", [("Odejdź", "LEAVE")])
-    
-    choices = [("Odejdź", "LEAVE")]
-    if clues_found["zaufanie_soltysa"]:
-        choices.insert(0, ("Zapłać za wskazówkę (5 zł)", "PAY_ZIELARKA"))
-        choices.insert(1, ("Skłam: 'Sołtys kazał' (Charyzma)", "TEST_CHARISMA_ZIELARKA"))
-        return ("Zielarka: Bieniasz cię przysłał? Zapłać 5 zł.", choices)
-    return ("Zielarka: Udowodnij najpierw, że tutejsi chcą z tobą gadać.", [("Wyjdź z namiotu", "LEAVE")])
-
-def get_ruiny_dialogue():
-    if clues_found.get("mamuna_zalatwiona", False) and not clues_found.get("ruiny_skarb", False):
-        return ("W świetle księżyca dostrzegasz błyszczącą sakiewkę pod deską...", [("Przeszukaj gruzy", "CLUE_RUINY_SKARB")])
-    if clues_found["zaufanie_zielarki"] and not clues_found["dowod_kosci"]:
-        return ("Rozgarniasz popiół w piecu. Znajdujesz zwęglone kości odmieńca...", [("Zabezpiecz dowód", "CLUE_KOSCI")])
-    elif clues_found["dowod_kosci"]: return ("Masz już dowód. Czas pokazać go Maćkowi.", [("Odejdź", "LEAVE")])
-    return ("Osmalone ściany potęgują odór pożaru.", [("Odejdź", "LEAVE")])
-
-def get_plebania_dialogue():
-    if clues_found["ma_upowaznienie_maciek"]: return ("Maciek: Jedź do Marii. Żuk stoi na skraju wsi.", [("Odejdź", "LEAVE")])
-    if clues_found["dowod_kosci"]:
-        return ("Maciek: Te kości... Ona nie spaliła naszego dziecka!\nWeź upoważnienie i jedź do niej do Choroszczy.", [("Weź upoważnienie", "GET_UPOWAZNIENIE")])
-    choices = [("Wyjdź", "LEAVE")]
-    if clues_found["quest_zielarka_zaczety"] and not clues_found["ma_ksiege_zielarki"]: choices.insert(0, ("Zielarka przysłała mnie po księgę.", "ZAPYTAC_MACKA_O_KSIEGE"))
-    return ("Maciek: Zostaw mnie... Moje dziecko nie żyje, a żonę zabrali...", choices)
-
-def get_zuk_dialogue():
-    if clues_found.get("mamuna_zalatwiona", False): return ("Żuk gotowy. Czas odpocząć w chacie.", [("Odejdź", "LEAVE")])
-    if clues_found["wiedza_o_mamunie"]: return ("Żuk gotowy, ale musisz zabić Mamunę w Lesie.", [("Jedź do lasu walczyć z Mamuną", "GO_TO_FOREST"), ("Odejdź", "LEAVE")])
-    if clues_found["ma_upowaznienie_maciek"]: return ("Masz dokumenty. Wsiadasz do Żuka.", [("Jedź do Choroszczy", "GO_CHOROSZCZ"), ("Jeszcze nie", "LEAVE")])
-    return ("Twój stary Żuk. Szkoda paliwa.", [("Odejdź", "LEAVE")])
-
-def get_bed_dialogue():
-    if clues_found.get("mamuna_zalatwiona", False) and not clues_found.get("powrot_do_cholow", False):
-        return ("Czujesz dziwny, mroczny niepokój unoszący się nad Chołami...", [("Połóż się spać (Rozpocznij kolejny akt)", "TRIGGER_MOB_EVENT")])
-    choices = [("Prześpij się (Regeneracja HP i Poczytalności)", "SLEEP")]
-    if not clues_found.get("wspolpraca_z_lusia", False):
-        if clues_found.get("ma_cukierki", False): choices.insert(0, ("Daj Lusi cukierki", "LUSIA_GIVE_CANDY"))
-        else: choices.insert(0, ("Porozmawiaj z małą Lusią", "LUSIA_TALK"))
-    else:
-        choices.insert(0, ("Porozmawiaj z Lusią", "LUSIA_TALK_TRUST"))
-    choices.append(("Wyjdź", "LEAVE"))
-    return ("Twoje posłanie. W kącie kuli się mała Lusia.", choices)
-
-def get_sklep_dialogue():
-    choices = [("Wyjdź", "LEAVE")]
-    if not clues_found.get("ma_cukierki", False): choices.insert(0, ("Kup Cukierki (5 zł)", "BUY_CANDY"))
-    if not clues_found.get("ma_tanie_wino", False): choices.insert(0, ("Kup Wino (10 zł)", "BUY_WINE"))
-    return ("Sklep 'Słodycze Wina'. Półki świecą pustkami.\nSprzedawca: Czego dusza pragnie?", choices)
-
-houses = [
-    House(250, 60, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue),
-    House(140, 320, 130, 90, "Chata po starym Mikołaju", get_bed_dialogue),
-    House(780, 80, 140, 100, "Namiot Starej Zielarki", get_zielarka_dialogue),
-    House(720, 320, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, ruined=True),
-    House(60, 480, 150, 130, "Plebania (Maciek)", get_plebania_dialogue),
-    House(420, 240, 80, 100, "Stara Kapliczka", get_kapliczka_dialogue),
-    House(360, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue),
-    House(780, 480, 140, 60, "Wóz (Żuk)", get_zuk_dialogue),
-    House(540, 400, 130, 90, "Sklep 'Słodycze Wina'", get_sklep_dialogue)
-]
-
-decorations_trees = [(40, 260), (50, 500), (360, 180), (280, 550), (660, 120), (690, 200), (880, 500), (900, 250)]
-forest_trees = [(random.randint(-10, WIDTH-20), random.randint(-10, HEIGHT-20)) for _ in range(80)]
-
-monster_triggers_forest = [
-    {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 - 200, 60, 60), "type": BOSS_LATARNIK, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 - 200, 60, 60), "type": BOSS_PIEN, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 - 250, HEIGHT//2 + 150, 60, 60), "type": BOSS_KRZYKACZ_FOREST, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 - 30, HEIGHT//2 + 100, 60, 60), "type": BOSS_MAMUNA, "beaten": False}, 
-    {"rect": pygame.Rect(WIDTH//2 - 50, HEIGHT//2 - 250, 60, 60), "type": BOSS_GAWRON, "beaten": False},
-    {"rect": pygame.Rect(WIDTH//2 + 190, HEIGHT//2 + 150, 60, 60), "type": BOSS_SKRZEKACZ, "beaten": False} 
-]
 
 low_terrain_surface = pygame.Surface((LOW_W, LOW_H))
 low_terrain_surface.fill(C_BLACK)
@@ -765,7 +643,6 @@ for ty in range(0, LOW_H, S(16)):
         if random.random() < 0.05:
             pygame.draw.circle(low_terrain_surface, C_GRAY, (tx + random.randint(0,10), ty + random.randint(0,10)), 1)
 
-
 current_state = STATE_INTRO
 anim_tick = 0
 active_house = None 
@@ -774,22 +651,17 @@ player_hp, player_max_hp = 100, 100
 player_sanity, player_max_sanity = 100, 100
 player_money = 10 
 base_attack, mod_attack, mod_stamina = 10, 0, 0
-
 active_boss_type = None
 boss_hp, boss_max_hp = 100, 100
 boss_mod_attack, boss_mod_stamina = 0, 0
-
 latarnik_fatigue = 0
 latarnik_max_fatigue = 40
 latarnik_pos = pygame.Vector2(WIDTH//2, 200)
-
 dialogue_title, dialogue_lines, dialogue_choices = "", [], []
 current_choice_idx = 0
-
 combat_projectiles, combat_bullets = [], []
 combat_timer = 0
 player_combat_pos = pygame.Vector2(WIDTH//2, HEIGHT//2 + 100)
-
 runner_mode_vines = False
 runner_player_y = HEIGHT - 150
 runner_player_vy = 0
@@ -1717,21 +1589,17 @@ while running:
         game_surface.fill(C_BLACK)
         
         if intro_step == 0:
-            # Cutscenka 1: Widok z kabiny Żuka
-            pygame.draw.rect(game_surface, C_DARK, (0, LOW_H-S(120), LOW_W, S(120))) # Kokpit
-            pygame.draw.circle(game_surface, C_BLACK, (S(180), LOW_H-S(40)), S(70), S(12)) # Kierownica
-            pygame.draw.circle(game_surface, C_VOID, (S(180), LOW_H-S(40)), S(20)) # Środek kierownicy
-            # Deszcz na szybie
+            pygame.draw.rect(game_surface, C_DARK, (0, LOW_H-S(120), LOW_W, S(120))) 
+            pygame.draw.circle(game_surface, C_BLACK, (S(180), LOW_H-S(40)), S(70), S(12)) 
+            pygame.draw.circle(game_surface, C_VOID, (S(180), LOW_H-S(40)), S(20)) 
             for _ in range(40):
                 rx, ry = random.randint(0, LOW_W), random.randint(0, LOW_H-S(120))
                 pygame.draw.line(game_surface, C_GRAY, (rx, ry), (rx-S(8), ry+S(20)), 2)
-            # Wycieraczki
             wx1 = S(150) + int(math.sin(anim_tick * 0.1) * S(50))
             wx2 = S(400) + int(math.sin(anim_tick * 0.1) * S(50))
             pygame.draw.line(game_surface, C_BLACK, (S(150), LOW_H-S(120)), (wx1, LOW_H-S(200)), S(5))
             pygame.draw.line(game_surface, C_BLACK, (S(400), LOW_H-S(120)), (wx2, LOW_H-S(200)), S(5))
         elif intro_step == 1:
-            # Cutscenka 2: Żuk wjeżdżający do wioski
             for i in range(12): draw_tree(game_surface, S(30 + i*100 * SCALE_F), LOW_H - S(150))
             draw_zuk(game_surface, S((anim_tick * 2.5) % WIDTH), LOW_H - S(100), light=True)
             
@@ -1758,52 +1626,39 @@ while running:
         
         if current_map == "VILLAGE":
             if current_state == STATE_HOUSE or (current_state == STATE_DIALOGUE and active_house is not None and "Wóz" not in active_house.name):
-                # ZAAWANSOWANE WNĘTRZE CHAT
                 room_r = pygame.Rect(S(50), S(50), S(WIDTH - 100), S(HEIGHT - 100))
-                # Ściany tylne (drewno)
                 pygame.draw.rect(game_surface, (25, 20, 20), room_r)
-                # Podłoga (perspektywa)
                 floor_y = S(HEIGHT//2 + 50)
                 floor_poly = [(S(50), floor_y), (S(WIDTH-50), floor_y), (S(WIDTH-50), S(HEIGHT-50)), (S(50), S(HEIGHT-50))]
                 pygame.draw.polygon(game_surface, (35, 25, 20), floor_poly)
-                # Linie podłogi (deski)
                 for i in range(S(50), S(WIDTH-50), S(40)):
                     pygame.draw.line(game_surface, C_VOID, (i, floor_y), (i - S(30), S(HEIGHT-50)), 2)
-                # Krawędzie pokoju
                 pygame.draw.rect(game_surface, C_BLACK, room_r, 4)
                 pygame.draw.line(game_surface, C_BLACK, (S(50), floor_y), (S(WIDTH-50), floor_y), 4)
 
-                # Wyposażenie i NPC na podstawie chaty
                 hx, hy = S(WIDTH//2), S(HEIGHT//2)
                 h_name = active_house.name if active_house else ""
                 
                 if "Sołtys" in h_name:
-                    # Biurko
                     pygame.draw.rect(game_surface, C_VOID, (hx - S(60), hy + S(10), S(120), S(40)))
                     pygame.draw.rect(game_surface, C_BLACK, (hx - S(60), hy + S(10), S(120), S(40)), 2)
                     draw_npc_soltys(game_surface, hx, hy)
-                    # Butelka bimbru
                     pygame.draw.rect(game_surface, (40, 80, 40), (hx - S(30), hy, S(8), S(15)))
                 elif "Zielark" in h_name:
-                    # Kociołek
                     pygame.draw.ellipse(game_surface, C_BLACK, (hx - S(40), hy + S(20), S(40), S(30)))
                     pygame.draw.ellipse(game_surface, C_DARK, (hx - S(40), hy + S(20), S(40), S(30)), 2)
-                    # Zielona maź
                     pygame.draw.ellipse(game_surface, (50, 100, 30), (hx - S(35), hy + S(22), S(30), S(10)))
                     draw_npc_zielarka(game_surface, hx + S(20), hy + S(10))
                 elif "Pleban" in h_name:
-                    # Stół i krzesło
                     pygame.draw.rect(game_surface, C_BROWN, (hx - S(30), hy + S(20), S(60), S(10)))
                     pygame.draw.rect(game_surface, C_BLACK, (hx - S(25), hy + S(30), S(5), S(20)))
                     pygame.draw.rect(game_surface, C_BLACK, (hx + S(20), hy + S(30), S(5), S(20)))
                     draw_npc_maciek(game_surface, hx, hy)
                 elif "Sklep" in h_name:
-                    # Lada
                     pygame.draw.rect(game_surface, C_VOID, (hx - S(80), hy + S(20), S(160), S(30)))
                     pygame.draw.rect(game_surface, C_BLACK, (hx - S(80), hy + S(20), S(160), S(30)), 2)
                     draw_npc_sprzedawca(game_surface, hx, hy)
                 elif "Mikołaj" in h_name:
-                    # Łóżko i Lusia
                     pygame.draw.rect(game_surface, C_VOID, (hx - S(40), hy + S(20), S(80), S(30)))
                     draw_lusia(game_surface, hx + S(20), hy + S(15))
 
@@ -1837,7 +1692,6 @@ while running:
         screen.blit(pygame.transform.scale(game_surface, (WIDTH, HEIGHT)), (0, 0))
         screen.blit(pygame.transform.scale(fx_surface, (WIDTH, HEIGHT)), (0, 0))
 
-        # UI OVERWORLD
         if current_map == "VILLAGE" and current_state == STATE_EXPLORE:
             screen.blit(font_main.render(f"Złoto: {player_money} zł", True, C_LIGHT), (20, 20))
             pygame.draw.rect(screen, C_DARK, (20, 50, 150, 15))
