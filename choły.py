@@ -503,10 +503,22 @@ def get_plebania_dialogue():
     return ("Przed plebanią siedzi Maciek.\nMaciek: Zostaw mnie... Moje dziecko nie żyje, a żonę zabrali do Choroszczy...", choices)
 
 def get_zuk_dialogue():
+    # Kiedy Mamuna jest już pokonana
+    if clues_found.get("mamuna_zalatwiona", False):
+        return ("Żuk jest gotowy do drogi. Sprawa z Mamuną została rozwiązana, czas odpocząć w chacie.", [("Odejdź", "LEAVE")])
+        
+    # Kiedy porozmawialiśmy z Marią i znamy prawdę (dodana opcja wyjazdu do lasu)
     if clues_found["wiedza_o_mamunie"]:
-        return ("Żuk jest gotowy do drogi, ale najpierw musisz zabić Mamunę w Lesie.", [("Odejdź", "LEAVE")])
+        return ("Żuk jest gotowy do drogi, ale najpierw musisz zabić Mamunę w Lesie.", [
+            ("Jedź do lasu walczyć z Mamuną", "GO_TO_FOREST"), 
+            ("Odejdź", "LEAVE")
+        ])
+        
+    # Kiedy mamy upoważnienie na start
     if clues_found["ma_upowaznienie_maciek"]:
         return ("Masz dokumenty od Maćka. Wsiadasz do Żuka, żeby odwiedzić Marię.", [("Jedź do Choroszczy", "GO_CHOROSZCZ"), ("Jeszcze nie", "LEAVE")])
+        
+    # Domyślny stan
     return ("Twój stary, wysłużony Żuk. Bez wyraźnego powodu nie ma sensu marnować paliwa.", [("Odejdź", "LEAVE")])
 
 def get_bed_dialogue():
