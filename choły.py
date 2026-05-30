@@ -166,7 +166,6 @@ BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
 
 # --- MROCZNY, ABSTRAKCYJNY SILNIK GRAFICZNY LOW-RES ---
-# --- MROCZNY, ABSTRAKCYJNY SILNIK GRAFICZNY LOW-RES ---
 
 # --- Postacie w grze (Low-Res na mapie) ---
 def draw_drozd(surface, x, y):
@@ -487,6 +486,7 @@ def draw_wielkie_drzewo(surface, x, y):
     pygame.draw.polygon(surface, C_DARK, [(x-10, y-70), (x-90, y-20), (x-30, y-100)])
     pygame.draw.polygon(surface, C_BLACK, [(x+10, y-65), (x+80, y-10), (x+40, y-110)])
     pygame.draw.polygon(surface, C_DARK, [(x-5, y-90), (x-40, y-130), (x+50, y-120)])
+
 def draw_zuk(surface, x, y, light=True):
     if light:
         # Upiorne, asymetryczne światło przedzierające się przez gęstą mgłę
@@ -1101,15 +1101,6 @@ while running:
                     if len(dialogue_choices) > 0: current_choice_idx = (current_choice_idx + 1) % len(dialogue_choices)
                 elif event.key in [pygame.K_RETURN, pygame.K_e, pygame.K_SPACE] or c_code:
                     if not c_code and len(dialogue_choices) > 0: c_code = dialogue_choices[current_choice_idx][1]
-
-                    # Ostre portrety na UI
-            if "Sołtys" in dialogue_title: draw_soltys(screen, avatar_x, avatar_y)
-            elif "Zielark" in dialogue_title: draw_zielarka(screen, avatar_x, avatar_y)
-            elif "Plebania" in dialogue_title or "Maciek" in combined_dialogue: draw_maciek(screen, avatar_x, avatar_y)
-            elif "Choroszcz" in dialogue_title or "Maria" in combined_dialogue: draw_maria(screen, avatar_x, avatar_y)
-            elif "Drwal" in dialogue_title or "Drwal" in combined_dialogue: draw_szef_drwali(screen, avatar_x, avatar_y)
-            elif "Sklep" in dialogue_title or "Sprzedawca" in combined_dialogue: draw_sprzedawca(screen, avatar_x, avatar_y)
-            elif "Menel" in dialogue_title or "Menel" in combined_dialogue: draw_menel(screen, avatar_x, avatar_y)
                     
                     if c_code == "LEAVE":
                         if current_map == "VILLAGE":
@@ -1783,11 +1774,14 @@ while running:
             combined_dialogue = " ".join(dialogue_lines)
             avatar_x, avatar_y = 90, HEIGHT - 210
             
-            # Ostre portrety na UI
+            # Ostre portrety na UI (Przeniesione tutaj z pętli eventów - tutaj ich miejsce!)
             if "Sołtys" in dialogue_title: draw_soltys(screen, avatar_x, avatar_y)
             elif "Zielark" in dialogue_title: draw_zielarka(screen, avatar_x, avatar_y)
             elif "Plebania" in dialogue_title or "Maciek" in combined_dialogue: draw_maciek(screen, avatar_x, avatar_y)
             elif "Choroszcz" in dialogue_title or "Maria" in combined_dialogue: draw_maria(screen, avatar_x, avatar_y)
+            elif "Drwal" in dialogue_title or "Drwal" in combined_dialogue: draw_szef_drwali(screen, avatar_x, avatar_y)
+            elif "Sklep" in dialogue_title or "Sprzedawca" in combined_dialogue: draw_sprzedawca(screen, avatar_x, avatar_y)
+            elif "Menel" in dialogue_title or "Menel" in combined_dialogue: draw_menel(screen, avatar_x, avatar_y)
             
             current_y = HEIGHT - 230
             current_y += draw_text_wrapped(screen, dialogue_title, font_title, C_LIGHT, 140, current_y, WIDTH - 200) + 10
