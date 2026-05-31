@@ -718,7 +718,8 @@ clues_found = defaultdict(bool)
 class BasicHouse:
     def __init__(self, x, y, name, w=160, h=110, ruined=False, dialog_override=None):
         self.rect = pygame.Rect(x, y, w, h)
-        self.door_rect = pygame.Rect(x + 20, y + h - 40, 40, 40)
+        # NAPRAWA: Drzwi logiczne są poszerzone i idealnie na środku wizualnych drzwi
+        self.door_rect = pygame.Rect(x + (w // 2) - 30, y + h - 20, 60, 40)
         self.name = name
         self.ruined = ruined
         self.dialog_override = dialog_override
@@ -843,7 +844,9 @@ while running:
                         break
                 
                 if current_state == STATE_EXPLORE:
-                    okno_soltysa = pygame.Rect(230, 90, 40, 40)
+                    # NAPRAWA: Zaktualizowane kordynaty okna. Poprzednio były nad dachem (y=90).
+                    # Dom Sołtysa leży w (150, 150), więc okno to okolice (250, 180).
+                    okno_soltysa = pygame.Rect(250, 180, 50, 50)
                     if okno_soltysa.collidepoint(player_pos.x, player_pos.y):
                         current_state = STATE_DIALOGUE
                         dialogue_title = "Ciemne Okno"
@@ -1804,9 +1807,14 @@ while running:
 
                 for h in houses:
                     if "Wóz (Żuk)" in h.name:
-                        draw_zuk(game_surface, S(h.rect.x), S(h.rect.y), light=False)
+                        # NAPRAWA: Rysowanie Żuka wyrównane z jego nową strefą interakcji
+                        draw_zuk(game_surface, S(h.rect.centerx), S(h.door_rect.centery - 15), light=False)
                     else:
                         draw_uncanny_house(game_surface, S(h.rect.x), S(h.rect.y), S(h.rect.width), S(h.rect.height), h.ruined)
+                    
+                    # DODATEK: Wizualna strefa wejścia (mroczna wycieraczka/cień pod drzwiami)
+                    pygame.draw.ellipse(game_surface, (15, 12, 10), (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)))
+                    pygame.draw.ellipse(game_surface, C_BLACK, (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)), 1)
         
         elif current_map == "FOREST":
             game_surface.fill((5, 5, 10)) 
