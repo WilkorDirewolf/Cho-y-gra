@@ -835,6 +835,7 @@ while running:
                         break
                     elif h.door_rect.collidepoint(player_pos.x, player_pos.y) and "Wóz (Żuk)" in h.name:
                         current_state = STATE_DIALOGUE
+                        active_house = h   # <--- NAPRAWA: przypisanie wozu jako aktywnej lokacji
                         dialogue_title = h.name
                         t, c = h.dialog_func()
                         dialogue_lines, dialogue_choices = [t], c
@@ -928,6 +929,10 @@ while running:
                     pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, c_code="TALK_TO_TREE"))
 
         elif current_state == STATE_HOUSE:
+            if active_house is None:  # <--- NAPRAWA: Zabezpieczenie przed błędem, gdy wejdziemy w dom bez przypisania
+                current_state = STATE_EXPLORE
+                continue
+                
             dist = pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2))
             if dist < 60:
                 current_state = STATE_DIALOGUE
@@ -1115,6 +1120,7 @@ while running:
                             if active_house and "Wóz" in active_house.name:
                                 current_state = STATE_EXPLORE
                                 player_pos.y += 30
+                                active_house = None # <--- NAPRAWA: Zrzucenie zaznaczenia po wyjściu z Wozu
                             else:
                                 current_state = STATE_HOUSE
                                 player_pos.y += 70 
