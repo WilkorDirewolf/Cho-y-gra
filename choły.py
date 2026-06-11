@@ -483,6 +483,8 @@ def apply_atmosphere(surface):
     surface.blit(vignette, (0, 0))
 
 # --- SILNIK TEKSTOWY ---
+pygame.font.init()
+font_title = pygame.font.SysFont("Times New Roman", 46, bold=True)
 font_main = pygame.font.SysFont("Courier New", 20, bold=True)
 font_sub = pygame.font.SysFont("Courier New", 15)
 
