@@ -1869,11 +1869,14 @@ while running:
                     pygame.draw.rect(game_surface, C_BROWN, (S(WIDTH//2 - 50), S(30), S(100), S(80)))
                     pygame.draw.rect(game_surface, C_BLACK, (S(WIDTH//2 - 50), S(30), S(100), S(80)), 2)
 
+                # --- RYSOWANIE POJAZDÓW (Żuk) ze starej listy ---
                 for h in houses:
                     if "Wóz (Żuk)" in h.name:
                         draw_zuk(game_surface, S(h.rect.centerx), S(h.door_rect.centery - 15), light=False)
-                    else:
-                        draw_village_house(game_surface, S(h.rect.x), S(h.rect.y), S(h.rect.width), S(h.rect.height), ruined=h.ruined)
+                
+                # --- NOWY SYSTEM RYSOWANIA DOMÓW ---
+                for v_house in village_houses_data:
+                    draw_village_house(game_surface, v_house["x"], v_house["y"], v_house["type"], is_highlighted=False)
                     
                     pygame.draw.ellipse(game_surface, (15, 12, 10), (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)))
                     pygame.draw.ellipse(game_surface, C_BLACK, (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)), 1)
