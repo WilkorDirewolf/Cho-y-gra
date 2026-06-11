@@ -1770,13 +1770,13 @@ while running:
     elif current_state == STATE_EXPLORE:
         # --- OBSŁUGA RUCHU DROZDA ---
         speed = 4
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:  player_x -= speed
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]: player_x += speed
-        if keys[pygame.K_UP] or keys[pygame.K_w]:    player_y -= speed
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:  player_y += speed
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:  player_pos.x -= speed
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]: player_pos.x += speed
+        if keys[pygame.K_UP] or keys[pygame.K_w]:    player_pos.y -= speed
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:  player_pos.y += speed
 
-        player_x = max(20, min(WIDTH - 20, player_x))
-        player_y = max(150, min(HEIGHT - 40, player_y))
+        player_pos.x = max(20, min(WIDTH - 20, player_pos.x))
+        player_pos.y = max(150, min(HEIGHT - 40, player_pos.y))
 
         game_surface.fill(C_BLACK)
         
@@ -1786,7 +1786,7 @@ while running:
         # Rysowanie budynków i sprawdzanie drzwi
         for house in village_houses_data:
             door_x, door_y = draw_village_house(game_surface, house["x"], house["y"], house["type"], is_highlighted=False)
-            distance = math.hypot(player_x - door_x, player_y - door_y)
+            distance = math.hypot(player_pos.x - door_x, player_pos.y - door_y)
             if distance < min_dist:
                 min_dist = distance
                 nearest_house = house
@@ -1794,7 +1794,7 @@ while running:
         if nearest_house:
             draw_village_house(game_surface, nearest_house["x"], nearest_house["y"], nearest_house["type"], is_highlighted=True)
 
-        draw_drozd(game_surface, S(player_x), S(player_y))
+        draw_drozd(game_surface, S(player_pos.x), S(player_pos.y))
         
         apply_atmosphere(game_surface)
         screen.blit(pygame.transform.scale(game_surface, (WIDTH, HEIGHT)), (0, 0))
@@ -1963,7 +1963,7 @@ while running:
         elif active_boss_type == BOSS_SKRZEKACZ: draw_monster_skrzekacz(game_surface, S(WIDTH//2), S(200))
         elif active_boss_type == BOSS_MAMUNA: draw_monster_mamuna(game_surface, S(WIDTH//2), S(200), anim_tick)
 
-        draw_drozd(game_surface, S(player_combat_pos.x), S(player_combat_pos.y))
+        draw_drozd(game_surface, S(player_combat_pos.x), S(player_combat_y))
         for p in combat_projectiles: p.draw(game_surface)
         for b in combat_bullets: b.draw(game_surface)
 
