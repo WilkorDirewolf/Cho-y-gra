@@ -16,11 +16,11 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Retro Horror Edition")
 clock = pygame.time.Clock()
 
-# --- HIGH-FIDELITY DARK PIXEL ART ---
-SCALE_F = 1.0  
-LOW_W, LOW_H = WIDTH, HEIGHT
+# --- NOWY KIERUNEK ARTYSTYCZNY (LOW-RES & PALETA) ---
+SCALE_F = 3.0
+LOW_W, LOW_H = int(WIDTH / SCALE_F), int(HEIGHT / SCALE_F) # Ok. 316x233
 game_surface = pygame.Surface((LOW_W, LOW_H))
-fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
+fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA) # <--- DODAJ TĘ LINIJKĘ
 
 def S(val):
     return int(val)
