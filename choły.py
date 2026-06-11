@@ -225,7 +225,7 @@ def draw_lusia(surface, x, y):
     pygame.draw.line(surface, C_HAIR, (x - 5, y - 17), (x - 1, y - 15))
     pygame.draw.line(surface, C_HAIR, (x + 4, y - 17), (x, y - 15))
 
-def draw_npc_soltys(surface, x, y):
+def draw_soltys(surface, x, y):
     pygame.draw.rect(surface, C_BROWN_DARK, (x - 14, y - 2, 28, 34))
     pygame.draw.rect(surface, C_VOID, (x - 14, y + 12, 28, 4)) 
     pygame.draw.rect(surface, C_GOLD, (x - 2, y + 11, 4, 6)) 
@@ -238,7 +238,7 @@ def draw_npc_soltys(surface, x, y):
     # Sumiasty wąs
     pygame.draw.polygon(surface, C_GRAY, [(x - 8, y - 6), (x + 8, y - 6), (x, y - 3)])
 
-def draw_npc_zielarka(surface, x, y):
+def draw_zielarka(surface, x, y):
     pygame.draw.polygon(surface, C_DARK, [(x, y - 10), (x - 15, y + 30), (x + 15, y + 30)])
     pygame.draw.circle(surface, C_LIGHT, (x, y + 2), 8) 
     pygame.draw.polygon(surface, C_GRAY, [(x - 9, y - 4), (x + 9, y - 4), (x, y - 10)]) 
@@ -249,7 +249,7 @@ def draw_npc_zielarka(surface, x, y):
     pygame.draw.line(surface, C_BLOOD, (x - 3, y + 7), (x + 3, y + 7), 1)
     pygame.draw.line(surface, C_BROWN, (x + 12, y - 5), (x + 12, y + 35), 2) # Kostur
 
-def draw_npc_maciek(surface, x, y):
+def draw_maciek(surface, x, y):
     pygame.draw.rect(surface, C_GRAY, (x - 11, y, 22, 30))
     pygame.draw.circle(surface, C_LIGHT, (x, y - 8), 8)
     pygame.draw.rect(surface, C_VOID, (x - 9, y - 16, 18, 5))
@@ -258,7 +258,7 @@ def draw_npc_maciek(surface, x, y):
     pygame.draw.rect(surface, C_DARK, (x - 1, y - 7, 2, 3))
     pygame.draw.line(surface, C_VOID, (x - 4, y - 3), (x + 4, y - 3), 1)
 
-def draw_npc_maria(surface, x, y):
+def draw_maria(surface, x, y):
     pygame.draw.polygon(surface, C_BLOOD, [(x, y - 2), (x - 13, y + 28), (x + 13, y + 28)])
     pygame.draw.circle(surface, C_LIGHT, (x, y - 2), 7)
     pygame.draw.circle(surface, C_VOID, (x - 2, y - 4), 1)
