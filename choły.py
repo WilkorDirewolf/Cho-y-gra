@@ -360,16 +360,16 @@ def draw_monster_skrzekacz(surface, x, y):
 def draw_true_krzykacz(surface, x, y, anim_tick):
     w, h = 180, 260 
     breathe = int(math.sin(anim_tick * 0.05) * 8)
-    legs = [[(x - w//3, y - h//3), (x - w, y + h//4), (x - w*0.9, y + h//3)], [(x + w//3, y - h//3), (x + w, y + h//4), (x + w*0.9, y + h//3)]]
+    legs = [[(x - w//3, y - h//3), (x - w, y + h//4), (x - int(w*0.9), y + h//3)], [(x + w//3, y - h//3), (x + w, y + h//4), (x + int(w*0.9), y + h//3)]]
     for leg in legs:
         pygame.draw.polygon(surface, C_VOID, leg)
-    torso_poly = [(x, y - h//2 + 30), (x - w//2.5, y + h//2), (x + w//2.5, y + h//2)]
+    torso_poly = [(x, int(y - h/2 + 30)), (int(x - w/2.5), int(y + h/2)), (int(x + w/2.5), int(y + h/2))]
     pygame.draw.polygon(surface, C_VOID, torso_poly)
     for i in range(5):
-        rib_y = y - h//2 + 60 + (i * 18) + breathe
-        rib_w = 25 + i * 4
+        rib_y = int(y - h/2 + 60 + (i * 18) + breathe)
+        rib_w = int(25 + i * 4)
         pygame.draw.ellipse(surface, C_LIGHT, (x - rib_w//2, rib_y, rib_w, 6))
-    skull_y = y - h//2 - 20 + breathe
+    skull_y = int(y - h/2 - 20 + breathe)
     skull_poly = [(x - 30, skull_y), (x + 30, skull_y), (x + 5, skull_y + 50), (x - 5, skull_y + 50)]
     pygame.draw.polygon(surface, C_LIGHT, skull_poly)
     pygame.draw.circle(surface, C_BLACK, (x - 12, skull_y + 20), 5)
@@ -505,23 +505,30 @@ font_sub = pygame.font.SysFont("Courier New", 15)
 def draw_text_wrapped(surface, text, font, color, x, y, max_width):
     paragraphs = text.split('\n')
     y_offset = 0
-    font_height = font.size('Tg')[1]
+    font_height = font.size('Tg')[1] + 2 
+    
     for paragraph in paragraphs:
         words = paragraph.split(' ')
         current_line = []
         for word in words:
+            if not current_line: 
+                current_line.append(word)
+                continue
+                
             test_line = ' '.join(current_line + [word])
             if font.size(test_line)[0] <= max_width:
                 current_line.append(word)
             else:
                 text_surface = font.render(' '.join(current_line), True, color)
                 surface.blit(text_surface, (x, y + y_offset))
-                y_offset += font_height + 4
+                y_offset += font_height
                 current_line = [word]
+                
         if current_line:
             text_surface = font.render(' '.join(current_line), True, color)
             surface.blit(text_surface, (x, y + y_offset))
-            y_offset += font_height + 4
+            y_offset += font_height
+            
     return y_offset
 
 class Projectile:
@@ -554,7 +561,6 @@ class RunnerObstacle:
 class House:
     def __init__(self, x, y, w, h, name, dialog_func, type_id="abandoned", ruined=False):
         self.rect = pygame.Rect(x, y, w, h)
-        # Zintegrowane, jednolite koordynaty drzwi do kolizji (nieskalowane)
         self.door_rect = pygame.Rect(x + w//2 - 30, y + h - 20, 60, 40)
         self.name = name
         self.dialog_func = dialog_func
@@ -692,7 +698,7 @@ current_state = STATE_INTRO
 current_map = "VILLAGE" 
 anim_tick = 0
 active_house = None 
-active_interactable = None # Zmienna sterująca podświetlaniem do wcisnięcia "E"
+active_interactable = None 
 player_pos = pygame.Vector2(250, 450) 
 player_hp, player_max_hp = 100, 100
 player_sanity, player_max_sanity = 100, 100
@@ -751,13 +757,11 @@ while running:
         player_pos.y = max(150, min(HEIGHT-40, player_pos.y))
         
         if current_map == "VILLAGE" and current_state == STATE_EXPLORE:
-            # Rejestracja kolizji pod klawisz "E"
             for h in houses:
                 if h.door_rect.collidepoint(player_pos.x, player_pos.y):
                     active_interactable = h
                     break
             
-            # Autotrigger ciemnego okna (jeśli gracz podejdzie bardzo blisko)
             okno_soltysa = pygame.Rect(180, 170, 60, 60)
             if okno_soltysa.collidepoint(player_pos.x, player_pos.y):
                 current_state = STATE_DIALOGUE
@@ -875,7 +879,7 @@ while running:
                 combat_projectiles.append(Projectile(WIDTH//2, 220, (dx/dist)*spd, (dy/dist)*spd, C_RED, 10))
             
         if keys[pygame.K_SPACE] and combat_timer % 15 == 0:
-            combat_bullets.append(Projectile(player_combat_pos.x, player_combat_pos.y, 0, -10, C_LIGHT, 6))
+            combat_bullets.append(Projectile(int(player_combat_pos.x), int(player_combat_pos.y), 0, -10, C_LIGHT, 6))
 
         for b in combat_bullets[:]:
             b.update()
@@ -967,12 +971,10 @@ while running:
         if runner_timer % 90 == 0:
             o_type = "LOG"
             if runner_mode_vines and random.choice([True, False]): o_type = "VINE"
-            # Poprawna fizyczna pozycja (nie-skalowana)
             runner_obstacles.append(RunnerObstacle(WIDTH, runner_ground_y - 25, 30, 25, o_type, 6))
             
         for o in runner_obstacles[:]:
             o.update()
-            # Kolizja: jeśli obiekt mija Drozda, sprawdzamy wysokość
             if 380 < o.x < 420 and runner_player_y > runner_ground_y - 30:
                 player_hp -= 10
                 runner_obstacles.remove(o)
@@ -1011,7 +1013,6 @@ while running:
                     current_state = STATE_EXPLORE
                     player_pos = pygame.Vector2(WIDTH//2, HEIGHT - 30)
 
-            # --- NOWY SYSTEM INTERAKCJI DLA DOMÓW [E] ---
             elif event.key == pygame.K_e and current_state == STATE_EXPLORE and not c_code:
                 if active_interactable:
                     current_state = STATE_DIALOGUE
@@ -1049,7 +1050,6 @@ while running:
                         player_pos.x -= 30 
                         continue
 
-                    # --- ZADANIA I TESTY ---
                     elif c_code == "RETURN_TO_VILLAGE_ACT2":
                         clues_found["powrot_do_cholow"] = True
                         current_map = "VILLAGE"
@@ -1555,11 +1555,9 @@ while running:
                     elif c_code == "TREE_FIGHT_DZIADEK":
                         current_state = STATE_RUNNER
                         runner_mode_vines = False
-                        runner_dziadek_hp = runner_dziadek_max_hp = 150
-                        runner_obstacles.clear()
+                        runner_dziadek_hp = 150
                         runner_timer = 0
-                        runner_player_vy = 0
-                        runner_player_y = HEIGHT - 150
+                        runner_obstacles.clear()
                         runner_bolts.clear()
                         continue
 
@@ -1608,11 +1606,11 @@ while running:
                     elif c_code == "TREE_FIGHT_DZIADEK_HARD":
                         current_state = STATE_RUNNER
                         runner_mode_vines = True
-                        runner_dziadek_hp = runner_dziadek_max_hp = 180
-                        runner_obstacles.clear()
+                        runner_dziadek_hp = 180
                         runner_timer = 0
                         runner_player_vy = 0
                         runner_player_y = HEIGHT - 150
+                        runner_obstacles.clear()
                         runner_bolts.clear()
                         continue
 
@@ -1627,21 +1625,20 @@ while running:
             elif current_state == STATE_END:
                 if event.key == pygame.K_ESCAPE: running = False
 
-    # 3. RENDEROWANIE Z WYSOKĄ ROZDZIELCZOŚCIĄ W HORROROWYM STYLU
+    # --- SEKCJA RENDEROWANIA ---
+    screen.fill(C_BLACK)
+    game_surface.fill(C_BLACK)
+    fx_surface.fill((0, 0, 0, 0))
+
     if current_state == STATE_INTRO:
-        screen.fill(C_BLACK)
-        game_surface.fill(C_BLACK)
-        
         if intro_step == 0:
             for i in range(15): 
                 tx = S((i*150 - anim_tick*6) % (WIDTH + 300) - 150)
                 draw_tree(game_surface, tx, LOW_H - S(120))
-            
             draw_zuk(game_surface, S(WIDTH // 2), LOW_H - S(80), light=True)
             for _ in range(60):
                 rx, ry = random.randint(0, LOW_W), random.randint(0, LOW_H)
                 pygame.draw.line(game_surface, C_GRAY, (rx, ry), (rx - S(15), ry + S(35)), 1)
-                
         elif intro_step == 1:
             for i in range(12): 
                 draw_tree(game_surface, S(30 + i*100 * SCALE_F), LOW_H - S(150))
@@ -1658,15 +1655,12 @@ while running:
         screen.blit(font_sub.render("[Spacja / Enter]", True, C_GRAY), (WIDTH - 200, HEIGHT - 40))
             
     elif current_state == STATE_TRANSITION:
-        screen.fill(C_BLACK)
         for i in range(5):
             col = (20 + i*40, 20 + i*40, 20 + i*40)
             pygame.draw.rect(screen, col, (WIDTH//2 - 100 + i*20, HEIGHT//2, S(15), S(15)))
         screen.blit(font_title.render("Wejście w mrok...", True, C_GRAY), (WIDTH//2 - 120, HEIGHT - 180))
 
     elif current_state == STATE_EXPLORE:
-        game_surface.fill(C_BLACK)
-        
         if current_map == "VILLAGE":
             game_surface.blit(low_terrain_surface, (0, 0))
             for tx, ty in decorations_trees: draw_tree(game_surface, S(tx), S(ty))
@@ -1676,14 +1670,12 @@ while running:
                 pygame.draw.rect(game_surface, C_BROWN, (S(WIDTH//2 - 50), S(30), S(100), S(80)))
                 pygame.draw.rect(game_surface, C_BLACK, (S(WIDTH//2 - 50), S(30), S(100), S(80)), 2)
 
-            # Rysowanie domów i wozu
             for h in houses:
                 if h.type_id == "zuk":
                     draw_zuk(game_surface, S(h.rect.centerx), S(h.door_rect.centery - 15), light=False)
                 else:
                     is_hl = (h == active_interactable)
                     draw_village_house(game_surface, h.rect.x, h.rect.y, h.type_id, is_highlighted=is_hl)
-                    # Cień pod drzwiami
                     pygame.draw.ellipse(game_surface, (15, 12, 10), (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)))
         
         elif current_map == "FOREST":
@@ -1700,13 +1692,12 @@ while running:
             draw_lesny_dziadek(game_surface, S(WIDTH//2 - 80), S(HEIGHT//2 + 50))
 
         draw_drozd(game_surface, S(player_pos.x), S(player_pos.y))
-        
         apply_atmosphere(game_surface)
+        
         screen.blit(pygame.transform.scale(game_surface, (WIDTH, HEIGHT)), (0, 0))
         if current_map == "FOREST":
             screen.blit(pygame.transform.scale(fx_surface, (WIDTH, HEIGHT)), (0, 0))
 
-        # UI i podpowiedzi w wiosce
         if current_map == "VILLAGE":
             screen.blit(font_main.render(f"Złoto: {player_money} zł", True, C_LIGHT), (20, 20))
             pygame.draw.rect(screen, C_DARK, (20, 50, 150, 15))
@@ -1724,9 +1715,6 @@ while running:
                 screen.blit(prompt_txt, (WIDTH // 2 - prompt_txt.get_width() // 2, HEIGHT - 60))
 
     elif current_state in [STATE_HOUSE, STATE_DIALOGUE, STATE_DICE_ROLL]:
-        game_surface.fill(C_BLACK)
-        fx_surface.fill((0, 0, 0, 0))
-        
         is_interior = (current_state == STATE_HOUSE) or (current_state == STATE_DIALOGUE and active_house is not None and "Wóz" not in active_house.name and "Okno" not in dialogue_title)
         
         if current_map == "VILLAGE" and is_interior:
@@ -1765,8 +1753,10 @@ while running:
                 pygame.draw.rect(game_surface, C_VOID, (hx - S(40), hy + S(20), S(80), S(30)))
                 draw_lusia(game_surface, hx + S(20), hy + S(15))
         else:
-            # Rysowanie tła, gdy dialog toczy się np. w lesie
-            game_surface.blit(low_terrain_surface, (0, 0))
+            if current_map == "VILLAGE":
+                game_surface.blit(low_terrain_surface, (0, 0))
+            else:
+                game_surface.fill((5, 5, 10))
             draw_drozd(game_surface, S(player_pos.x), S(player_pos.y))
 
         apply_atmosphere(game_surface)
@@ -1810,9 +1800,6 @@ while running:
             screen.blit(font_main.render("NACIŚNIJ [ENTER] BY WALCZYĆ", True, C_LIGHT), (WIDTH//2 - 150, 450))
 
     elif current_state == STATE_COMBAT:
-        game_surface.fill(C_BLACK)
-        fx_surface.fill((0, 0, 0, 0)) 
-        
         for i in range(10):
             fy = S(150 + i*50)
             pygame.draw.line(game_surface, C_VOID, (S(100), fy), (S(WIDTH-100), fy + S(15)), 2)
@@ -1825,7 +1812,6 @@ while running:
         elif active_boss_type == BOSS_SKRZEKACZ: draw_monster_skrzekacz(game_surface, S(WIDTH//2), S(200))
         elif active_boss_type == BOSS_MAMUNA: draw_monster_mamuna(game_surface, S(WIDTH//2), S(200), anim_tick)
 
-        # Usunięty błąd z player_combat_y
         draw_drozd(game_surface, S(player_combat_pos.x), S(player_combat_pos.y))
         for p in combat_projectiles: p.draw(game_surface)
         for b in combat_bullets: b.draw(game_surface)
@@ -1846,8 +1832,6 @@ while running:
         pygame.draw.rect(screen, C_BLACK, (20, HEIGHT - 40, 200, 20), 2)
 
     elif current_state == STATE_RUNNER:
-        game_surface.fill(C_BLACK)
-        fx_surface.fill((0, 0, 0, 0))
         pygame.draw.line(game_surface, C_BROWN, (0, S(runner_ground_y) + S(20)), (LOW_W, S(runner_ground_y) + S(20)), S(6))
         
         draw_drozd(game_surface, S(400), S(runner_player_y))
@@ -1865,7 +1849,6 @@ while running:
         screen.blit(font_main.render("[SPACE] - Skok  |  [E] - Strzał do tyłu", True, C_GRAY), (WIDTH//2 - 180, 60))
 
     elif current_state == STATE_END:
-        screen.fill(C_BLACK)
         draw_text_wrapped(screen, "KONIEC GRY", font_title, C_RED, WIDTH//2 - 60, HEIGHT//2 - 100, 400)
         draw_text_wrapped(screen, end_message, font_main, C_LIGHT, WIDTH//2 - 250, HEIGHT//2 - 30, 500)
         screen.blit(font_sub.render("[ESC] - Wyjście", True, C_DARK), (WIDTH//2 - 50, HEIGHT - 100))
