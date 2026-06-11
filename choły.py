@@ -1808,12 +1808,15 @@ while running:
                 if nearest_house["npc"] == "SOLTYS":
                     current_state = STATE_DIALOGUE
                     current_npc = "SOLTYS"
+                    get_soltys_dialogue()
                 elif nearest_house["npc"] == "MACIEK":
                     current_state = STATE_DIALOGUE
                     current_npc = "MACIEK"
+                    get_maciek_dialogue()
                 elif nearest_house["npc"] == "ZIELARKA":
                     current_state = STATE_DIALOGUE
                     current_npc = "ZIELARKA"
+                    get_zielarka_dialogue()
                 elif nearest_house["npc"] == "LUSIA":
                     current_state = STATE_COMBAT
                     current_enemy = BOSS_MAMUNA
@@ -1966,7 +1969,7 @@ while running:
         elif active_boss_type == BOSS_SKRZEKACZ: draw_monster_skrzekacz(game_surface, S(WIDTH//2), S(200))
         elif active_boss_type == BOSS_MAMUNA: draw_monster_mamuna(game_surface, S(WIDTH//2), S(200), anim_tick)
 
-        draw_drozd(game_surface, S(player_combat_pos.x), S(player_combat_y))
+        draw_drozd(game_surface, S(player_combat_pos.x), S(player_combatpos._y))
         for p in combat_projectiles: p.draw(game_surface)
         for b in combat_bullets: b.draw(game_surface)
 
