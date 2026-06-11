@@ -20,7 +20,12 @@ clock = pygame.time.Clock()
 SCALE_F = 3.0
 LOW_W, LOW_H = int(WIDTH / SCALE_F), int(HEIGHT / SCALE_F) # Ok. 316x233
 game_surface = pygame.Surface((LOW_W, LOW_H))
-fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA) # <--- DODAJ TĘ LINIJKĘ
+fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
+
+# POPRAWKA: Współrzędne muszą być dzielone przez skalę, żeby zmieściły się na małym ekranie!
+
+def S(val):
+    return int(val / SCALE_F)
 
 def S(val):
     return int(val)
