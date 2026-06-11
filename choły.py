@@ -162,6 +162,12 @@ BOSS_SKRZEKACZ = "SKRZEKACZ (Demon)"
 BOSS_KRZYKACZ_FOREST = "MŁODY KRZYKACZ"
 BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
 
+# Dodatkowe kolory potrzebne do zaawansowanych modeli (jeśli nie ma ich w palecie)
+C_BROWN = (60, 40, 30)
+C_DARK_GREEN = (15, 40, 20)
+C_DEEP_BLUE = (10, 15, 45)
+C_PURE_WHITE = (255, 255, 255)
+
 # --- POSTACIE (SZCZEGÓŁOWE MODELE ANATOMICZNE) ---
 def draw_drozd(surface, x, y):
     pygame.draw.rect(surface, C_BLACK, (x - 6, y + 16, 4, 14))
@@ -476,6 +482,35 @@ def draw_text_wrapped(surface, text, font, color, x, y, max_width):
             surface.blit(text_surface, (x, y + y_offset))
             y_offset += font_height + 4
     return y_offset
+
+# =============================================================================
+# 2. CENTRALNY DISPATCHER MODELI (Łączy nazwy bossów z rysowaniem)
+# =============================================================================
+def draw_monster_by_type(surface, monster_type, x, y, timer=0):
+    """
+    Automatycznie dobiera i rysuje model na podstawie przypisanej stałej tekstowej.
+    Zabezpiecza grę przed crashowaniem, jeśli pojawi się nieznany typ potwora.
+    """
+    if monster_type == BOSS_MAMUNA:
+        draw_mamuna(surface, x, y, timer)
+    elif monster_type == BOSS_LATARNIK:
+        draw_latarnik(surface, x, y, timer)
+    elif monster_type == BOSS_PIEN:
+        draw_pien(surface, x, y)
+    elif monster_type == BOSS_GAWRON:
+        draw_gawron(surface, x, y, timer)
+    elif monster_type == BOSS_SKRZEKACZ:
+        draw_skrzekacz(surface, x, y, timer)
+    elif monster_type == BOSS_KRZYKACZ_FOREST:
+        draw_krzykacz(surface, x, y, False, timer)
+    elif monster_type == BOSS_TRUE_KRZYKACZ:
+        draw_krzykacz(surface, x, y, True, timer)
+    elif "DZIADEK" in str(monster_type).upper():
+        draw_lesny_dziadek(surface, x, y)
+    else:
+        # Elegancki, uniwersalny model awaryjny (Glitch-Kwadrat), zamiast wywalenia błędu
+        pygame.draw.rect(surface, C_RED, (x - 10, y - 10, 20, 20), 2)
+        pygame.draw.line(surface, C_LIGHT, (x - 10, y - 10), (x + 10, y + 10), 1)
 
 class Projectile:
     def __init__(self, x, y, vx, vy, color, radius=5):
