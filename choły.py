@@ -447,6 +447,31 @@ def draw_zuk(surface, x, y, light=False):
         pygame.draw.polygon(light_surf, (255, 240, 170, 60), [(0, 30), (350, 0), (350, 160)])
         surface.blit(light_surf, (x + 68, y - 80))
 
+def draw_oily_mud(surface, x, y, w=45, h=12, timer=0):
+    """
+    Rysuje oleiste, trujące błoto pośrodku lasu.
+    Może służyć jako przeszkoda w trybie runnera lub element mapy.
+    """
+    # 1. Główna, głęboka plama mazi (bardzo ciemny, zgniły fiolet/czarny)
+    pygame.draw.ellipse(surface, (15, 10, 20), (x, y, w, h))
+    
+    # 2. Oleisty, mieniący się połysk na powierzchni (ciemna purpura/zieleń)
+    pygame.draw.ellipse(surface, (35, 25, 45), (x + 4, y + 2, w - 8, h - 5), 1)
+    
+    # 3. Proceduralne, animowane bąble gazu (pękające w pętli czasu)
+    bubble_phase = (int(timer * 0.1) + x) % 3  # Unikalna faza dla każdej plamy błota
+    
+    if bubble_phase == 0:
+        # Rosnący bąbel w lewej części
+        pygame.draw.circle(surface, (25, 15, 35), (x + w // 3, y + h // 2), 3)
+        pygame.draw.circle(surface, C_GRAY, (x + w // 3, y + h // 2), 3, 1)
+    elif bubble_phase == 1:
+        # Pęknięty bąbel (zostają małe kropki)
+        pygame.draw.circle(surface, (45, 30, 60), (x + w // 3 - 2, y + h // 2), 1)
+        pygame.draw.circle(surface, (45, 30, 60), (x + w // 3 + 2, y + h // 2), 1)
+        # Nowy bąbel po prawej
+        pygame.draw.circle(surface, (25, 15, 35), (x + 2 * w // 3, y + h // 3), 2)
+
 def apply_atmosphere(surface):
     vignette = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
     pygame.draw.rect(vignette, (C_BLACK[0], C_BLACK[1], C_BLACK[2], 220), (0, 0, LOW_W, LOW_H), 40)
