@@ -15,619 +15,596 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Krzykacz: Polowanie na Mamunę - Retro Horror Edition")
 clock = pygame.time.Clock()
 
-# --- NOWY KIERUNEK ARTYSTYCZNY (HIGH-RES PIXEL ART & PALETA) ---
-SCALE_F = 1.5
-LOW_W, LOW_H = int(WIDTH / SCALE_F), int(HEIGHT / SCALE_F)
+# ==============================================================================
+# --- NOWY KIERUNEK ARTYSTYCZNY (HIGH-FIDELITY DARK PIXEL ART & PALETA) ---
+# ==============================================================================
+SCALE_F = 1.0  # Skala 1:1 odblokowuje pełną rozdzielczość dla zaawansowanego pixel artu
+LOW_W, LOW_H = WIDTH, HEIGHT
 game_surface = pygame.Surface((LOW_W, LOW_H))
 fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
 
 def S(val):
-    return int(val / SCALE_F)
+    # Funkcja zachowuje kompatybilność z Twoim pozycjonowaniem obiektów,
+    # ale pozwala na rysowanie z precyzją co do jednego piksela na ekranie.
+    return int(val)
 
-# Paleta kolorów
-C_BLACK = (2, 2, 5)
-C_VOID = (10, 10, 15)
-C_DARK = (35, 30, 35)
-C_BROWN = (70, 50, 40)
-C_GRAY = (100, 100, 110)
-C_LIGHT = (210, 210, 200)
-C_RED = (190, 10, 10)
-C_BLOOD = (100, 0, 0)
-C_GOLD = (200, 150, 50) 
-C_SKIN = (220, 180, 150)
-
-# --- ZAAWANSOWANY PROCEDURALNY GENERATOR MUZYKI ---
-def generate_slavic_theme():
-    sample_rate = 44100
-    notes = {
-        'D3': 146.83, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 
-        'A#3': 233.08, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 
-        'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'rest': 0.0
-    }
-
-    melody = [
-        ('D4', 0.4), ('F4', 0.2), ('E4', 0.2), ('D4', 0.4), ('A3', 0.4),
-        ('D4', 0.4), ('F4', 0.2), ('G4', 0.2), ('A4', 0.8),
-        ('A4', 0.4), ('G4', 0.2), ('F4', 0.2), ('E4', 0.4), ('C4', 0.4),
-        ('D4', 0.2), ('E4', 0.2), ('F4', 0.2), ('E4', 0.2), ('D4', 0.8)
-    ] * 2
-
-    harmony = [
-        ('D3', 1.6), ('F3', 1.6), 
-        ('C4', 1.6), ('D3', 1.6)
-    ] * 2
-    
-    total_duration = sum(dur for _, dur in melody)
-    total_samples = int(sample_rate * total_duration)
-    
-    flute_track = np.zeros(total_samples)
-    violin_track = np.zeros(total_samples)
-    percussion_track = np.zeros(total_samples)
-    
-    current_sample = 0
-    for note, duration in melody:
-        samples = int(sample_rate * duration)
-        if note != 'rest':
-            freq = notes[note]
-            t = np.linspace(0, duration, samples, False)
-            wave = 0.8 * np.sin(2 * np.pi * freq * t) + 0.2 * np.sin(2 * np.pi * (freq * 2) * t)
-            tremolo = 1.0 + 0.15 * np.sin(2 * np.pi * 6 * t)
-            wave *= tremolo
-            env = np.ones_like(t)
-            attack, release = int(sample_rate * 0.05), int(sample_rate * 0.1)
-            if samples > attack + release:
-                env[:attack] = np.linspace(0, 1, attack)
-                env[-release:] = np.linspace(1, 0, release)
-            flute_track[current_sample:current_sample+samples] += wave * env * 0.5
-        current_sample += samples
-
-    current_sample = 0
-    for note, duration in harmony:
-        samples = int(sample_rate * duration)
-        if note != 'rest':
-            freq = notes[note]
-            t = np.linspace(0, duration, samples, False)
-            vibrato = np.sin(2 * np.pi * 5 * t) * 0.015
-            mod_freq = freq * (1 + vibrato)
-            phase = np.cumsum(mod_freq) / sample_rate
-            wave = 2 * (phase - np.floor(phase + 0.5))
-            wave = 0.5 * wave + 0.5 * np.sin(2 * np.pi * mod_freq * t)
-            env = np.ones_like(t)
-            attack, release = int(sample_rate * 0.4), int(sample_rate * 0.6) 
-            if samples > attack + release:
-                env[:attack] = np.linspace(0, 1, attack)
-                env[-release:] = np.linspace(1, 0, release)
-            violin_track[current_sample:current_sample+samples] += wave * env * 0.4
-        current_sample += samples
-
-    beat_interval = 0.4
-    num_beats = int(total_duration / beat_interval)
-    t_total = np.linspace(0, total_duration, total_samples, False)
-    
-    for i in range(num_beats):
-        beat_start = int(i * beat_interval * sample_rate)
-        if i % 2 == 0:
-            beat_end = min(beat_start + int(0.2 * sample_rate), total_samples)
-            t_beat = t_total[:beat_end-beat_start]
-            kick_freq = np.linspace(120, 30, len(t_beat)) 
-            kick = np.sin(2 * np.pi * kick_freq * t_beat)
-            kick_env = np.exp(-12 * t_beat) 
-            percussion_track[beat_start:beat_end] += kick * kick_env * 0.9
-        
-        if i % 2 != 0 or i % 4 == 3:
-            shaker_end = min(beat_start + int(0.08 * sample_rate), total_samples)
-            t_shaker = t_total[:shaker_end-beat_start]
-            noise = np.random.uniform(-1, 1, len(t_shaker)) 
-            shaker_env = np.exp(-25 * t_shaker)
-            percussion_track[beat_start:shaker_end] += noise * shaker_env * 0.25
-
-    final_track = flute_track + violin_track + percussion_track
-    final_track = np.clip(final_track, -1.0, 1.0)
-    track_16bit = np.int16(final_track * 32767)
-    return np.ascontiguousarray(np.column_stack((track_16bit, track_16bit)))
-
-def generate_barka_theme():
-    sample_rate = 44100
-    notes = {
-        'G3': 196.00, 'A3': 220.00, 'B3': 246.94, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'rest': 0.0
-    }
-    melody = [
-        ('G4', 0.3), ('C4', 0.3), ('D4', 0.3), ('E4', 0.5), ('D4', 0.3), ('C4', 0.3), ('A4', 0.6), ('rest', 0.1),
-        ('A4', 0.3), ('F4', 0.3), ('G4', 0.3), ('A4', 0.5), ('G4', 0.3), ('F4', 0.3), ('E4', 0.6), ('rest', 0.1),
-        ('E4', 0.3), ('C4', 0.3), ('D4', 0.3), ('E4', 0.5), ('D4', 0.3), ('C4', 0.3), ('G3', 0.6), ('rest', 0.1),
-        ('A3', 0.3), ('B3', 0.3), ('C4', 0.3), ('D4', 0.5), ('B3', 0.3), ('G3', 0.3), ('C4', 0.8)
-    ]
-    total_samples = sum(int(sample_rate * dur) for _, dur in melody)
-    track = np.zeros(total_samples)
-    current_sample = 0
-    for note_name, duration in melody:
-        samples = int(sample_rate * duration)
-        if note_name != 'rest':
-            freq = notes[note_name]
-            t = np.linspace(0, duration, samples, False)
-            wave = 0.6 * np.sin(2 * np.pi * freq * t) + 0.2 * (2 * np.abs(2 * (t * freq - np.floor(t * freq + 0.5))) - 1)
-            env = np.ones_like(t)
-            attack, release = int(sample_rate * 0.05), int(sample_rate * 0.05)
-            if samples > attack + release:
-                env[:attack] = np.linspace(0, 1, attack)
-                env[-release:] = np.linspace(1, 0, release)
-            track[current_sample:current_sample+samples] += wave * env * 0.4
-        current_sample += samples
-    track = np.clip(track, -1.0, 1.0)
-    track_16bit = np.int16(track * 32767)
-    return np.ascontiguousarray(np.column_stack((track_16bit, track_16bit)))
-
-print("Generowanie złożonej, mrocznej ścieżki dźwiękowej...")
-audio_data = generate_slavic_theme()
-slavic_sound = pygame.sndarray.make_sound(audio_data)
-slavic_sound.set_volume(0.3)
-slavic_sound.play(loops=-1, fade_ms=1000)
-
-barka_data = generate_barka_theme()
-barka_sound = pygame.sndarray.make_sound(barka_data)
-barka_sound.set_volume(0.3)
-
-# --- STANY GRY ---
-STATE_INTRO = "INTRO"
-STATE_EXPLORE = "EXPLORE"
-STATE_HOUSE = "HOUSE"
-STATE_DIALOGUE = "DIALOGUE"
-STATE_TRANSITION = "TRANSITION"
-STATE_DICE_ROLL = "DICE_ROLL"
-STATE_COMBAT = "COMBAT"
-STATE_RUNNER = "RUNNER"
-STATE_END = "END" 
-
-current_map = "VILLAGE" 
-end_message = ""
-
-BOSS_MAMUNA = "MAMUNA (Pani Lasu)"
-BOSS_LATARNIK = "LATARNIK (Zwodzący Cień)"
-BOSS_PIEN = "PIEŃ (Zgniły Strażnik)"
-BOSS_GAWRON = "GAWRON (Czarny Anioł)"
-BOSS_SKRZEKACZ = "SKRZEKACZ (Demon)"
-BOSS_KRZYKACZ_FOREST = "MŁODY KRZYKACZ"
-BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
+# Rozszerzona, mroczna paleta kolorów z przejściami tonalnymi do cieniowania
+C_BLACK = (4, 4, 7)
+C_VOID = (12, 11, 16)
+C_DARK = (26, 24, 30)
+C_DARK_MOSS = (18, 32, 20)
+C_MOSS = (42, 65, 45)
+C_BROWN_DARK = (40, 28, 22)
+C_BROWN = (80, 55, 40)
+C_BROWN_LIGHT = (115, 90, 70)
+C_GRAY_DARK = (50, 50, 55)
+C_GRAY = (105, 105, 115)
+C_GRAY_LIGHT = (165, 165, 175)
+C_LIGHT = (220, 215, 200)
+C_RED_DARK = (100, 5, 5)
+C_RED = (195, 15, 15)
+C_BLOOD = (130, 0, 5)
+C_GOLD_DARK = (130, 95, 25)
+C_GOLD = (215, 165, 45) 
+C_GOLD_LIGHT = (250, 220, 140)
+C_SKIN = (230, 190, 160)
+C_SKIN_SHADOW = (190, 145, 115)
 
 def draw_pixel_line(surface, color, start, end, thickness=1):
-    pygame.draw.line(surface, color, start, end, int(thickness * SCALE_F))
+    pygame.draw.line(surface, color, start, end, int(thickness))
+
+# Funkcja pomocnicza do nakładania tradycyjnego cieniowania (Dithering pasowy)
+def apply_dither_rect(surface, rect, color1, color2, density=2):
+    for x in range(rect.x, rect.x + rect.width):
+        for y in range(rect.y, rect.y + rect.height):
+            if (x + y) % density == 0:
+                surface.set_at((x, y), color1)
+            else:
+                surface.set_at((x, y), color2)
 
 # ==============================================================================
-# --- POSTACIE (Z AKTUALIZACJĄ WYGLĄDU) ---
+# --- POSTACIE GRACZY (WYSOKA SZCZEGÓŁOWOŚĆ) ---
 # ==============================================================================
 def draw_drozd(surface, x, y):
-    pygame.draw.rect(surface, (40, 40, 45), (x - S(4), y + S(5), S(3), S(10)))
-    pygame.draw.rect(surface, (40, 40, 45), (x + S(1), y + S(5), S(3), S(10)))
-    pygame.draw.rect(surface, (20, 15, 10), (x - S(5), y + S(13), S(4), S(3)))
-    pygame.draw.rect(surface, (20, 15, 10), (x + S(1), y + S(13), S(4), S(3)))
-    pygame.draw.rect(surface, (110, 85, 60), (x - S(6), y - S(5), S(12), S(14)))
-    pygame.draw.rect(surface, (70, 50, 35), (x - S(6), y - S(5), S(12), S(14)), 1) 
-    pygame.draw.line(surface, (50, 30, 20), (x - S(6), y + S(2)), (x + S(5), y + S(2)), S(2))
-    pygame.draw.rect(surface, C_SKIN, (x - S(4), y - S(12), S(8), S(8)))
-    pygame.draw.rect(surface, (30, 25, 20), (x - S(5), y - S(14), S(10), S(4)))
-    pygame.draw.rect(surface, (30, 25, 20), (x - S(5), y - S(12), S(3), S(4)))
-    pygame.draw.line(surface, (200, 240, 255), (x - S(3), y - S(9)), (x + S(3), y - S(9)), S(2))
-    pygame.draw.line(surface, (50, 50, 50), (x, y - S(10)), (x, y - S(8)), S(1)) 
+    # 1. Cienie i buty
+    pygame.draw.rect(surface, C_BLACK, (x - 6, y + 16, 4, 14))
+    pygame.draw.rect(surface, C_BLACK, (x + 2, y + 16, 4, 14))
+    pygame.draw.rect(surface, (15, 15, 22), (x - 9, y + 27, 7, 3))
+    pygame.draw.rect(surface, (15, 15, 22), (x + 2, y + 27, 7, 3))
+    
+    # 2. Warstwowy płaszcz Drozda z teksturą materiału
+    coat_rect = pygame.Rect(x - 11, y - 8, 22, 25)
+    pygame.draw.rect(surface, C_DARK, coat_rect)
+    pygame.draw.rect(surface, C_BROWN_DARK, (x - 10, y - 7, 20, 23))
+    # Proceduralny dithering na płaszczu
+    for px in range(x - 9, x + 9, 2):
+        for py in range(y - 5, y + 14, 3):
+            surface.set_at((px + (py % 2), py), C_DARK)
+
+    # Kołnierz i złote guziki surtuta
+    pygame.draw.polygon(surface, C_BLACK, [(x - 11, y - 8), (x - 4, y + 2), (x, y - 8)])
+    pygame.draw.polygon(surface, C_BLACK, [(x + 11, y - 8), (x + 4, y + 2), (x, y - 8)])
+    surface.set_at((x - 4, y + 4), C_GOLD)
+    surface.set_at((x - 4, y + 10), C_GOLD)
+    surface.set_at((x + 3, y + 4), C_GOLD)
+    surface.set_at((x + 3, y + 10), C_GOLD)
+    
+    # Krawat / Szal pod szyją
+    pygame.draw.rect(surface, C_RED_DARK, (x - 2, y - 8, 4, 5))
+    
+    # 3. Głowa, twarz i cieniowanie anatomiczne
+    pygame.draw.rect(surface, C_SKIN_SHADOW, (x - 7, y - 18, 14, 11))
+    pygame.draw.rect(surface, C_SKIN, (x - 6, y - 18, 12, 9))
+    # Cień pod rondem kapelusza
+    pygame.draw.line(surface, C_SKIN_SHADOW, (x - 6, y - 18), (x + 5, y - 18))
+    
+    # Okulary z efektem błysku szkła (Cyan-White)
+    pygame.draw.rect(surface, C_VOID, (x - 5, y - 15, 4, 4), 1)
+    pygame.draw.rect(surface, C_VOID, (x + 1, y - 15, 4, 4), 1)
+    pygame.draw.line(surface, C_VOID, (x - 1, y - 14), (x + 1, y - 14))
+    surface.set_at((x - 4, y - 14), (180, 240, 255))
+    surface.set_at((x + 2, y - 14), (255, 255, 255))
+    
+    # Bogato zdobiony Cylinder
+    pygame.draw.rect(surface, C_VOID, (x - 12, y - 21, 24, 3))  # Rondo
+    pygame.draw.rect(surface, C_VOID, (x - 8, y - 35, 16, 15))  # Korona cylindra
+    pygame.draw.rect(surface, C_RED, (x - 8, y - 24, 16, 3))    # Karmazynowa wstęga
+    # Blik światła na boku kapelusza
+    pygame.draw.line(surface, C_GRAY, (x - 7, y - 34), (x - 7, y - 25))
 
 def draw_lusia(surface, x, y):
-    C_BLUE = (50, 100, 180)
-    C_BLONDE = (220, 200, 50)
-    pygame.draw.polygon(surface, C_BLUE, [(x - S(6), y), (x + S(6), y), (x + S(4), y + S(16)), (x - S(4), y + S(16))])
-    pygame.draw.line(surface, C_DARK, (x - S(4), y + S(2)), (x - S(10), y + S(8)), 2)
-    pygame.draw.line(surface, C_DARK, (x - S(10), y + S(8)), (x - S(8), y + S(18)), 1)
-    pygame.draw.rect(surface, C_SKIN, (x - S(4), y - S(9), S(8), S(9)))
-    pygame.draw.polygon(surface, C_BLONDE, [(x - S(7), y - S(11)), (x + S(8), y - S(9)), (x + S(4), y - S(2)), (x - S(6), y - S(3))])
-    pygame.draw.circle(surface, C_BLACK, (x - S(2), y - S(5)), 1)
-    pygame.draw.circle(surface, C_BLACK, (x + S(2), y - S(6)), 1)
+    C_BLUE_DARK = (25, 45, 90)
+    C_BLUE_LIGHT = (45, 80, 150)
+    C_HAIR = (225, 185, 45)
+    C_HAIR_SHADOW = (160, 120, 20)
+    
+    # 1. Spódnica i haft ludowy
+    pygame.draw.polygon(surface, C_BLUE_DARK, [(x - 10, y + 2), (x + 10, y + 2), (x + 14, y + 26), (x - 14, y + 26)])
+    # Detale fałd sukni
+    pygame.draw.line(surface, (15, 30, 65), (x - 2, y + 2), (x - 4, y + 25), 2)
+    pygame.draw.line(surface, (15, 30, 65), (x + 2, y + 2), (x + 4, y + 25), 2)
+    # Dolny haft (Pixel-art pattern)
+    for bx in range(x - 11, x + 12, 3):
+        surface.set_at((bx, y + 22), C_RED)
+        surface.set_at((bx + 1, y + 23), C_GOLD)
+
+    # 2. Gorset i ręce
+    pygame.draw.rect(surface, C_DARK, (x - 7, y - 6, 14, 9))
+    pygame.draw.line(surface, C_RED, (x - 2, y - 6), (x - 2, y + 2))
+    pygame.draw.line(surface, C_RED, (x + 1, y - 6), (x + 1, y + 2))
+    # Ręce splecione
+    pygame.draw.rect(surface, C_SKIN, (x - 4, y + 3, 8, 4))
+    
+    # 3. Głowa i długie słowiańskie warkocze
+    # Lewy warkocz
+    pygame.draw.rect(surface, C_HAIR_SHADOW, (x - 11, y - 8, 4, 22))
+    for h_dot in range(y - 6, y + 14, 4):
+        pygame.draw.rect(surface, C_HAIR, (x - 11, h_dot, 3, 2))
+    # Prawy warkocz
+    pygame.draw.rect(surface, C_HAIR_SHADOW, (x + 7, y - 8, 4, 22))
+    for h_dot in range(y - 6, y + 14, 4):
+        pygame.draw.rect(surface, C_HAIR, (x + 8, h_dot, 3, 2))
+        
+    # Twarz
+    pygame.draw.rect(surface, C_SKIN_SHADOW, (x - 6, y - 15, 12, 10))
+    pygame.draw.rect(surface, C_SKIN, (x - 5, y - 15, 10, 8))
+    # Włosy na głowie (Przedziałek)
+    pygame.draw.rect(surface, C_HAIR_SHADOW, (x - 6, y - 17, 12, 3))
+    pygame.draw.line(surface, C_HAIR, (x - 5, y - 17), (x - 1, y - 15))
+    pygame.draw.line(surface, C_HAIR, (x + 4, y - 17), (x, y - 15))
+    
+    # Puste, niepokojące oczy horroru
+    surface.set_at((x - 3, y - 11), C_BLACK)
+    surface.set_at((x + 2, y - 11), C_BLACK)
+    surface.set_at((x - 3, y - 10), C_RED_DARK) # Delikatne zaszczurzenie oczu
+    surface.set_at((x + 2, y - 10), C_RED_DARK)
 
 # ==============================================================================
-# --- MINI-SPRITE NPC ---
+# --- WYSOKIEJ JAKOŚCI SPRITE'Y NPC ---
 # ==============================================================================
 def draw_npc_soltys(surface, x, y):
-    pygame.draw.rect(surface, (40, 50, 40), (x-S(8), y-S(5), S(16), S(15))) 
-    pygame.draw.rect(surface, C_SKIN, (x-S(5), y-S(12), S(10), S(8))) 
-    pygame.draw.polygon(surface, C_BLACK, [(x-S(7), y-S(14)), (x+S(7), y-S(12)), (x+S(2), y-S(10)), (x-S(6), y-S(11))])
+    # Kożuch wełniany z fakturą
+    pygame.draw.rect(surface, C_BROWN_DARK, (x - 12, y - 5, 24, 25))
+    apply_dither_rect(surface, pygame.Rect(x - 10, y - 3, 20, 21), C_BROWN, C_BROWN_DARK, 3)
+    # Czapka uszanka
+    pygame.draw.rect(surface, C_GRAY_DARK, (x - 9, y - 20, 18, 8))
+    pygame.draw.rect(surface, C_GRAY, (x - 11, y - 16, 3, 7)) # Nauszniki
+    pygame.draw.rect(surface, C_GRAY, (x + 8, y - 16, 3, 7))
+    # Twarz i broda
+    pygame.draw.rect(surface, C_SKIN, (x - 6, y - 12, 12, 8))
+    pygame.draw.polygon(surface, C_LIGHT, [(x - 7, y - 6), (x + 7, y - 6), (x, y + 8)]) # Gęsta broda
+    # Fajka z żarzącym się tytoniem
+    pygame.draw.line(surface, C_BLACK, (x + 2, y - 5), (x + 9, y - 5))
+    surface.set_at((x + 9, y - 6), C_GOLD)
+    if random.random() < 0.15: # Animowana iskierka dymu
+        surface.set_at((x + 10 + random.randint(-1, 1), y - 8 - random.randint(0, 3)), C_GRAY_LIGHT)
 
 def draw_npc_zielarka(surface, x, y):
-    pygame.draw.polygon(surface, (60, 40, 50), [(x, y-S(10)), (x-S(12), y+S(10)), (x+S(10), y+S(10))])
-    pygame.draw.rect(surface, C_SKIN, (x-S(4), y-S(14), S(8), S(6)))
-    pygame.draw.polygon(surface, C_GRAY, [(x-S(5), y-S(16)), (x+S(5), y-S(14)), (x, y-S(8))]) 
+    # Długa, stara chusta spływająca na ramiona
+    pygame.draw.polygon(surface, (50, 30, 60), [(x, y - 22), (x - 14, y + 4), (x + 14, y + 4)])
+    # Suknia i fartuch w zielone wzory
+    pygame.draw.rect(surface, (35, 25, 40), (x - 10, y + 4, 20, 20))
+    pygame.draw.rect(surface, C_DARK_MOSS, (x - 6, y + 4, 12, 20))
+    for i in range(y + 6, y + 22, 4):
+        pygame.draw.line(surface, C_MOSS, (x - 5, i), (x + 5, i), 1)
+    # Twarz schowana w cieniu chusty
+    pygame.draw.rect(surface, C_SKIN_SHADOW, (x - 5, y - 14, 10, 8))
+    # Wiązanka ziół w rękach
+    pygame.draw.circle(surface, C_GOLD, (x, y + 8), 4)
+    pygame.draw.circle(surface, C_MOSS, (x - 2, y + 10), 3)
 
 def draw_npc_maciek(surface, x, y):
-    pygame.draw.rect(surface, (50, 50, 60), (x-S(6), y-S(5), S(12), S(15)))
-    pygame.draw.rect(surface, C_SKIN, (x-S(4), y-S(12), S(8), S(8)))
-    pygame.draw.line(surface, C_SKIN, (x-S(6), y), (x-S(5), y-S(10)), S(2))
-    pygame.draw.line(surface, C_SKIN, (x+S(6), y), (x+S(5), y-S(10)), S(2))
+    # Kamizelka z pasami cross-hatch
+    pygame.draw.rect(surface, C_GRAY_DARK, (x - 9, y - 4, 18, 24))
+    pygame.draw.line(surface, C_LIGHT, (x - 8, y - 4), (x + 8, y + 16), 1)
+    pygame.draw.line(surface, C_LIGHT, (x + 8, y - 4), (x - 8, y + 16), 1)
+    # Spodnie i buty
+    pygame.draw.rect(surface, C_DARK, (x - 7, y + 20, 14, 6))
+    # Głowa z czapką roboczą
+    pygame.draw.rect(surface, C_SKIN, (x - 5, y - 14, 10, 10))
+    pygame.draw.rect(surface, C_BROWN, (x - 7, y - 17, 14, 4))
+    # Topór na plecach
+    pygame.draw.line(surface, C_BROWN_DARK, (x - 14, y + 15), (x - 4, y - 10), 2)
+    pygame.draw.polygon(surface, C_GRAY_LIGHT, [(x - 14, y + 15), (x - 20, y + 10), (x - 18, y + 20)])
 
 def draw_npc_sprzedawca(surface, x, y):
-    pygame.draw.rect(surface, C_VOID, (x-S(4), y-S(5), S(8), S(20)))
-    pygame.draw.rect(surface, C_LIGHT, (x-S(3), y-S(12), S(6), S(8))) 
-    pygame.draw.line(surface, C_BLACK, (x-S(2), y-S(8)), (x+S(2), y-S(8)), S(1)) 
+    # Tajemniczy handlarz - całkowicie czarny, poszarpany płaszcz (Mroczna sylwetka)
+    pygame.draw.polygon(surface, C_VOID, [(x, y - 20), (x - 13, y + 25), (x + 13, y + 25)])
+    pygame.draw.rect(surface, C_BLACK, (x - 10, y, 20, 25))
+    # Strzępy materiału na dole płaszcza
+    for i in range(x - 12, x + 13, 3):
+        pygame.draw.line(surface, C_VOID, (i, y + 23), (i + random.randint(-1,1), y + 27 + random.randint(0,2)))
+    # Dwa błyszczące punkty zamiast oczu głęboko w kapturze
+    surface.set_at((x - 3, y - 10), C_GOLD_LIGHT)
+    surface.set_at((x + 2, y - 10), C_GOLD_LIGHT)
 
-# --- ARCHITEKTURA I ŚRODOWISKO (MARTWA WIOSKA) ---
-def draw_uncanny_house(surface, x, y, width=160, height=110, ruined=False):
+# ==============================================================================
+# --- ARCHITEKTURA I OTOCZENIE (WIOSKA I LAS O WYSOKIEJ ROZDZIELCZOŚCI) ---
+# ==============================================================================
+def draw_uncanny_house(surface, x, y, width=170, height=120, ruined=False):
     if ruined:
-        C_WALL = (30, 25, 25)
-        main_rect = pygame.Rect(x, y + height//3, width, height - height//3)
-        pygame.draw.rect(surface, C_WALL, main_rect)
-        pygame.draw.rect(surface, C_BLACK, main_rect, 2)
-        pygame.draw.polygon(surface, C_VOID, [(x - S(5), y + height//3), (x + width // 3, y + S(5)), (x + width//2, y + height//3 + S(5))])
-        pygame.draw.line(surface, C_DARK, (x + S(10), y + height//3), (x + width - S(10), y - S(20)), 4) 
+        C_WALL = (35, 30, 32)
+        # Zrujnowane, pęknięte ściany log-cabin
+        pygame.draw.rect(surface, C_WALL, (x, y + 30, width, height - 30))
+        pygame.draw.rect(surface, C_BLACK, (x, y + 30, width, height - 30), 2)
+        # Wyłomy w deskach (dziury strukturalne)
+        for i in range(5):
+            rx = x + random.randint(15, width - 30)
+            ry = y + 40 + random.randint(0, height - 80)
+            pygame.draw.rect(surface, C_VOID, (rx, ry, 12, 18))
+        # Strzaskany dach
+        pygame.draw.polygon(surface, C_VOID, [(x - 10, y + 30), (x + width//3, y - 10), (x + width - 20, y + 30)])
+        pygame.draw.line(surface, C_BLACK, (x, y + 30), (x + width, y - 5), 4)
     else:
-        C_WALL = (85, 80, 75)   
-        C_ROOF = (50, 45, 45)   
-        C_WINDOW = (5, 5, 5)    
+        C_WALL = (90, 80, 70)
+        C_WALL_DARK = (65, 55, 45)
+        C_ROOF = (55, 45, 45)
+        C_ROOF_DARK = (35, 25, 25)
         
+        # 1. Główna bryła z wyraźną fakturą ułożonych bali drewnianych
         pygame.draw.rect(surface, C_WALL, (x, y, width, height))
         pygame.draw.rect(surface, C_BLACK, (x, y, width, height), 2)
-        
-        for i in range(S(15), height, S(15)):
-            pygame.draw.line(surface, (70, 65, 60), (x, y + i), (x + width, y + i), 1)
-            
-        roof_poly = [(x - S(15), y), (x + width // 2, y - S(70)), (x + width + S(15), y)]
-        pygame.draw.polygon(surface, C_ROOF, roof_poly)
-        pygame.draw.polygon(surface, C_BLACK, roof_poly, 2)
-        
-        dw, dh = S(36), S(45)
-        pygame.draw.rect(surface, (40, 35, 30), (x + width//2 - dw//2, y + height - dh, dw, dh))
-        pygame.draw.rect(surface, C_BLACK, (x + width//2 - dw//2, y + height - dh, dw, dh), 2)
-        
-        ww, wh = S(30), S(35)
-        pygame.draw.rect(surface, C_WINDOW, (x + S(20), y + S(40), ww, wh))
-        pygame.draw.rect(surface, C_WINDOW, (x + width - S(50), y + S(40), ww, wh))
-        pygame.draw.rect(surface, (60, 55, 50), (x + S(20), y + S(40), ww, wh), 2)
-        pygame.draw.rect(surface, (60, 55, 50), (x + width - S(50), y + S(40), ww, wh), 2)
+        for i in range(12, height, 12):
+            pygame.draw.line(surface, C_WALL_DARK, (x, y + i), (x + width, y + i), 2)
+            # Słoje i sęki drewna
+            if i % 24 == 0:
+                surface.set_at((x + 25, y + i - 4), C_BROWN_DARK)
+                surface.set_at((x + width - 40, y + i - 6), C_BROWN_DARK)
 
-def draw_dead_grass(surface, x_start, x_end, y_start, y_end, count=150):
-    C_GRASS = (70, 85, 70) 
+        # 2. Gotycki, stromy dach z dachówkami (Pixel-shingles)
+        roof_poly = [(x - 20, y), (x + width // 2, y - 80), (x + width + 20, y)]
+        pygame.draw.polygon(surface, C_ROOF, roof_poly)
+        pygame.draw.polygon(surface, C_BLACK, roof_poly, 3)
+        # Rysowanie rzędów dachówek
+        for ry in range(y - 70, y, 10):
+            ratio = (ry - (y - 80)) / 80.0
+            w_at_y = int((width + 40) * ratio)
+            x_start = (x + width//2) - w_at_y//2
+            pygame.draw.line(surface, C_ROOF_DARK, (x_start, ry), (x_start + w_at_y, ry), 1)
+
+        # 3. Masywne, spękane drzwi
+        dw, dh = 40, 55
+        dx = x + width//2 - dw//2
+        dy = y + height - dh
+        pygame.draw.rect(surface, C_BROWN_DARK, (dx, dy, dw, dh))
+        pygame.draw.rect(surface, C_BLACK, (dx, dy, dw, dh), 2)
+        # Deski drzwi i żelazne okucia
+        pygame.draw.line(surface, C_BLACK, (dx + dw//2, dy), (dx + dw//2, dy + dh), 1)
+        pygame.draw.line(surface, C_GRAY, (dx + 4, dy + dh//3), (dx + dw - 4, dy + dh//3), 2)
+        pygame.draw.line(surface, C_GRAY, (dx + 4, dy + 2*dh//3), (dx + dw - 4, dy + 2*dh//3), 2)
+        pygame.draw.circle(surface, C_GOLD, (dx + dw - 8, dy + dh//2), 2) # Klamka
+
+        # 4. Okna z ditherowanym, niespokojnym blaskiem wnętrza
+        ww, wh = 35, 40
+        for wx in [x + 25, x + width - 60]:
+            wy = y + 30
+            win_rect = pygame.Rect(wx, wy, ww, wh)
+            pygame.draw.rect(surface, C_VOID, win_rect)
+            # Dithering sugerujący zapaloną w środku, dogasającą naftę
+            apply_dither_rect(surface, pygame.Rect(wx+2, wy+2, ww-4, wh-4), (70, 50, 20), C_VOID, 2)
+            pygame.draw.rect(surface, C_BROWN_DARK, win_rect, 2)
+            # Krzyż okienny
+            pygame.draw.line(surface, C_BROWN_DARK, (wx + ww//2, wy), (wx + ww//2, wy + wh), 1)
+            pygame.draw.line(surface,  C_BROWN_DARK, (wx, wy + wh//2), (wx + ww, wy + wh//2), 1)
+
+def draw_dead_grass(surface, x_start, x_end, y_start, y_end, count=220):
+    # Zgniła, pożółkła trawa o zróżnicowanej wysokości i odcieniach
     for _ in range(count):
         gx = random.randint(x_start, x_end)
         gy = random.randint(y_start, y_end)
-        pygame.draw.line(surface, C_GRASS, (gx, gy), (gx, gy - S(random.randint(6, 12))), 1)
+        g_len = random.randint(8, 18)
+        color = random.choice([(65, 75, 60), (85, 90, 70), (50, 55, 45)])
+        # Krzywe, wyschnięte źdźbła
+        pygame.draw.line(surface, color, (gx, gy), (gx + random.randint(-3, 3), gy - g_len), 1)
 
 def draw_oily_mud(surface, x, y, width, height):
-    C_MUD_DARK = (30, 28, 25)
-    C_MUD_REFLECTION = (55, 55, 60)
-    pygame.draw.ellipse(surface, C_MUD_DARK, (x, y, width, height))
-    pygame.draw.ellipse(surface, C_MUD_REFLECTION, (x + S(4), y + S(2), width - S(12), height - S(6)))
+    # Oleiste kałuże z przejściem tonalnym i blikiem błękitu nocnego nieba
+    pygame.draw.ellipse(surface, (25, 22, 20), (x, y, width, height))
+    pygame.draw.ellipse(surface, (40, 42, 48), (x + 5, y + 3, width - 10, height - 6))
+    pygame.draw.ellipse(surface, (60, 70, 85), (x + 12, y + 5, width - 24, height - 10))
 
 def draw_tree(surface, x, y):
-    pien_poly = [(x - S(6), y + S(10)), (x + S(8), y + S(8)), (x + S(10), y - S(40)), (x, y - S(80)), (x - S(8), y - S(30))]
+    # Potężne, sękate drzewo narysowane za pomocą połączonych, organicznych wielokątów
+    pien_poly = [(x - 12, y + 15), (x + 14, y + 12), (x + 8, y - 60), (x + 2, y - 130), (x - 10, y - 50)]
     pygame.draw.polygon(surface, C_BLACK, pien_poly)
-    pygame.draw.polygon(surface, C_VOID, [(x - S(5), y - S(70)), (x - S(30), y - S(90)), (x - S(10), y - S(110)), (x + S(5), y - S(90))])
-    pygame.draw.polygon(surface, C_VOID, [(x + S(5), y - S(65)), (x + S(35), y - S(75)), (x + S(20), y - S(100)), (x - S(2), y - S(85))])
-    draw_pixel_line(surface, C_DARK, (x - S(25), y - S(95)), (x - S(45), y - S(120)), 2)
-    draw_pixel_line(surface, C_DARK, (x + S(30), y - S(75)), (x + S(50), y - S(90)), 2)
+    
+    # Kora drzewa (Cross-hatching tekstury kory)
+    for ty in range(y - 40, y + 10, 8):
+        pygame.draw.line(surface, C_DARK, (x - 6, ty), (x + 4, ty - 3), 1)
+    
+    # Rozłożyste, powykręcane konary górne
+    pygame.draw.polygon(surface, C_VOID, [(x - 6, y - 110), (x - 45, y - 140), (x - 20, y - 170), (x + 2, y - 130)])
+    pygame.draw.polygon(surface, C_VOID, [(x + 4, y - 100), (x + 50, y - 120), (x + 35, y - 155), (x - 2, y - 125)])
+    
+    # Drobne gałązki (Pixel filaments)
+    draw_pixel_line(surface, C_BLACK, (x - 38, y - 148), (x - 65, y - 180), 2)
+    draw_pixel_line(surface, C_BLACK, (x + 42, y - 130), (x + 70, y - 155), 2)
+    draw_pixel_line(surface, C_VOID, (x - 5, y - 160), (x, y - 210), 1)
 
 def draw_well(surface, x, y):
-    w, h = S(40), S(30)
-    pygame.draw.rect(surface, C_GRAY, (x - w//2, y - h//2, w, h))
+    w, h = 55, 40
+    # Cembrowina z ustrukturyzowanych kamieni
+    pygame.draw.rect(surface, C_GRAY_DARK, (x - w//2, y - h//2, w, h))
     pygame.draw.rect(surface, C_BLACK, (x - w//2, y - h//2, w, h), 2)
-    for i in range(3):
-        pygame.draw.circle(surface, C_DARK, (x - w//2 + S(10) + i*S(10), y + random.randint(-4,4)), S(3))
-    pygame.draw.line(surface, C_BROWN, (x - w//2 + 4, y - h//2), (x - w//2 + 4, y - S(35)), 3)
-    pygame.draw.line(surface, C_BROWN, (x + w//2 - 4, y - h//2), (x + w//2 - 4, y - S(35)), 3)
-    pygame.draw.polygon(surface, C_DARK, [(x - w//2 - 4, y - S(35)), (x, y - S(45)), (x + w//2 + 4, y - S(35))])
-    pygame.draw.polygon(surface, C_BLACK, [(x - w//2 - 4, y - S(35)), (x, y - S(45)), (x + w//2 + 4, y - S(35))], 1)
+    # Rysowanie pojedynczych kamieni w murze studni
+    for row in range(0, h, 10):
+        pygame.draw.line(surface, C_VOID, (x - w//2, y - h//2 + row), (x + w//2, y - h//2 + row), 1)
+        for col in range(x - w//2 + (row % 4), x + w//2, 12):
+            pygame.draw.line(surface, C_VOID, (col, y - h//2 + row), (col, y - h//2 + row + 10), 1)
+    
+    # Drewniane podpory dachu i kołowrót z lisią fakturą linową
+    pygame.draw.line(surface, C_BROWN_DARK, (x - w//2 + 6, y - h//2), (x - w//2 + 6, y - 50), 4)
+    pygame.draw.line(surface, C_BROWN_DARK, (x + w//2 - 6, y - h//2), (x + w//2 - 6, y - 50), 4)
+    # Kołowrót z liną
+    pygame.draw.rect(surface, C_BROWN, (x - w//2 + 10, y - 38, w - 20, 10))
+    apply_dither_rect(surface, pygame.Rect(x - w//2 + 15, y - 38, w - 30, 10), C_GOLD_DARK, C_BROWN, 2)
+    
+    # Dach studni porośnięty zgniłym mchem
+    roof_well = [(x - w//2 - 6, y - 50), (x, y - 70), (x + w//2 + 6, y - 50)]
+    pygame.draw.polygon(surface, C_DARK, roof_well)
+    pygame.draw.polygon(surface, C_BLACK, roof_well, 2)
+    pygame.draw.polygon(surface, C_DARK_MOSS, [(x - w//2, y - 52), (x, y - 67), (x + w//2, y - 52)])
 
 def draw_zuk(surface, x, y, light=False):
-    C_KAROSERIA = (90, 105, 115) 
-    C_PLANDEKA = (130, 130, 125) 
-    C_OPONY = (20, 20, 20)
-    C_SZYBY = (15, 20, 25) 
+    # Legendarny Żuk w wersji post-apo / horror (Rdza, głębokie tekstury)
+    C_BODY = (75, 85, 95)
+    C_RUST = (120, 60, 30)
+    C_CANVAS = (110, 110, 105)
+    C_TIRE = (12, 12, 15)
     
-    pygame.draw.rect(surface, C_PLANDEKA, (x - S(70), y - S(65), S(85), S(35)))
-    pygame.draw.rect(surface, C_KAROSERIA, (x - S(70), y - S(30), S(85), S(20)))
+    # Plandeka z cieniowaniem zagłębień materiału
+    pygame.draw.rect(surface, C_CANVAS, (x - 90, y - 85, 110, 50))
+    for i in range(x - 80, x + 10, 15):
+        pygame.draw.line(surface, C_GRAY_DARK, (i, y - 85), (i + 4, y - 35), 2)
+        
+    # Karoseria (Podstawa paki i szoferka)
+    pygame.draw.rect(surface, C_BODY, (x - 90, y - 35, 110, 25))
+    pygame.draw.rect(surface, C_BODY, (x + 20, y - 70, 45, 60))
     
-    pygame.draw.rect(surface, C_KAROSERIA, (x + S(15), y - S(55), S(35), S(45)))
-    pygame.draw.polygon(surface, C_SZYBY, [(x + S(20), y - S(50)), (x + S(45), y - S(50)), (x + S(45), y - S(35)), (x + S(20), y - S(35))])
+    # Dodawanie fakturowanej rdzy (Proceduralne plamy na blasze)
+    for _ in range(35):
+        rx = x + random.randint(-85, 60)
+        ry = y + random.randint(-35, 15)
+        surface.set_at((rx, ry), C_RUST)
+        
+    # Okna szoferki i cień kierowcy w środku
+    pygame.draw.polygon(surface, C_VOID, [(x + 25, y - 62), (x + 58, y - 62), (x + 58, y - 42), (x + 25, y - 42)])
+    surface.set_at((x + 35, y - 50), C_DARK) # Sylwetka wewnątrz studium strachu
     
-    pygame.draw.polygon(surface, C_KAROSERIA, [(x + S(50), y - S(35)), (x + S(70), y - S(25)), (x + S(70), y - S(10)), (x + S(50), y - S(10))])
-    pygame.draw.rect(surface, (50, 50, 50), (x + S(65), y - S(12), S(10), S(6)))
+    # Koła (Masywne opony, bieżnik, felgi)
+    pygame.draw.circle(surface, C_TIRE, (x - 50, y + 5), 18)
+    pygame.draw.circle(surface, C_TIRE, (x + 40, y + 5), 18)
+    pygame.draw.circle(surface, C_GRAY_DARK, (x - 50, y + 5), 8)
+    pygame.draw.circle(surface, C_GRAY_LIGHT, (x + 40, y + 5), 8)
 
-    pygame.draw.circle(surface, C_OPONY, (x - S(40), y - S(5)), S(14))
-    pygame.draw.circle(surface, C_OPONY, (x + S(35), y - S(5)), S(14))
-    pygame.draw.circle(surface, (100, 100, 100), (x - S(40), y - S(5)), S(6)) 
-    pygame.draw.circle(surface, (100, 100, 100), (x + S(35), y - S(5)), S(6))
-
-    pygame.draw.ellipse(surface, (200, 200, 200) if not light else (255, 255, 180), (x + S(66), y - S(24), S(6), S(10)))
+    # Reflektor przedni
+    pygame.draw.ellipse(surface, C_LIGHT if not light else C_GOLD_LIGHT, (x + 62, y - 26, 8, 14))
     
-    if light:
-        light_surf = pygame.Surface((S(250), S(100)), pygame.SRCALPHA)
-        pygame.draw.polygon(light_surf, (255, 255, 150, 40), [(0, S(30)), (S(250), 0), (S(250), S(100))])
-        surface.blit(light_surf, (x + S(70), y - S(54)))
+    if light: # Przepiękny, ditherowany, wolumetryczny stożek światła reflektorów
+        light_surf = pygame.Surface((350, 160), pygame.SRCALPHA)
+        for lx in range(0, 350, 4):
+            h_at_x = int(30 + (lx * 0.35))
+            ly_start = 80 - h_at_x // 2
+            for ly in range(ly_start, ly_start + h_at_x):
+                alpha = int(60 * (1.0 - (lx / 350.0))) # Zanikanie światła wraz z dystansem
+                if (lx + ly) % 2 == 0: # Dithering światła we mgle
+                    light_surf.set_at((lx, ly), (255, 240, 170, alpha))
+        surface.blit(light_surf, (x + 68, y - 80))
 
-# --- POTWORY ---
+# ==============================================================================
+# --- POTWORY (BESTIARIUSZ SLOWIAŃSKI - WYSOKI DETAL & HORROR FX) ---
+# ==============================================================================
 def draw_monster_latarnik(surface, x, y, anim_tick):
-    offset_y = int(math.sin(anim_tick * 0.1) * S(10))
+    offset_y = int(math.sin(anim_tick * 0.1) * 12)
     y += offset_y
-    shadow_poly = [(x, y - S(50)), (x - S(25), y + S(20)), (x - S(10), y + S(35)), (x + S(15), y + S(30)), (x + S(30), y - S(10))]
+    
+    # Całun widmowy - powiewający cień
+    shadow_poly = [(x, y - 70), (x - 35, y + 25), (x - 15, y + 50), (x + 20, y + 40), (x + 40, y - 15)]
     pygame.draw.polygon(surface, C_VOID, shadow_poly)
-    pygame.draw.polygon(surface, C_BLACK, shadow_poly, 1) 
-    for i in range(8):
-        ky = y - S(40) + i*S(8)
-        pygame.draw.ellipse(surface, C_LIGHT, (x - S(6), ky, S(12), S(5)))
-        pygame.draw.ellipse(surface, C_DARK, (x - S(5), ky + S(1), S(10), S(4)), 1)
-    arm_start, arm_elbow, arm_hand = (x + S(10), y - S(20)), (x + S(35), y), (x + S(25), y + S(30))
-    draw_pixel_line(surface, C_BLACK, arm_start, arm_elbow, 4)
-    draw_pixel_line(surface, C_VOID, arm_elbow, arm_hand, 3)
-    pygame.draw.circle(surface, C_LIGHT, arm_elbow, 3)
-    lat_r = pygame.Rect(arm_hand[0] - S(8), arm_hand[1], S(16), S(20))
-    pygame.draw.rect(surface, C_BROWN, lat_r)
+    pygame.draw.polygon(surface, C_BLACK, shadow_poly, 2)
+    
+    # Kręgosłup złożony z ludzkich czaszek/kręgów (Tekstura kości)
+    for i in range(10):
+        ky = y - 55 + i * 9
+        pygame.draw.ellipse(surface, C_LIGHT, (x - 7, ky, 14, 6))
+        pygame.draw.ellipse(surface, C_GRAY, (x - 5, ky + 1, 10, 4), 1)
+        
+    # Kościste ramię trzymające latarnię
+    arm_start, arm_elbow, arm_hand = (x + 12, y - 25), (x + 45, y), (x + 35, y + 40)
+    draw_pixel_line(surface, C_BLACK, arm_start, arm_elbow, 5)
+    draw_pixel_line(surface, C_VOID, arm_elbow, arm_hand, 4)
+    pygame.draw.circle(surface, C_LIGHT, arm_elbow, 4)
+    
+    # Antyczna miedziana latarnia z precyzyjną ramą
+    lat_r = pygame.Rect(arm_hand[0] - 10, arm_hand[1], 20, 26)
+    pygame.draw.rect(surface, C_BROWN_DARK, lat_r)
     pygame.draw.rect(surface, C_BLACK, lat_r, 2)
-    light_val = int(abs(math.sin(anim_tick * 0.2)) * 100) + 155
-    pygame.draw.rect(surface, (light_val, int(light_val*0.7), 0), (lat_r.x + 3, lat_r.y + 3, lat_r.w - 6, lat_r.h - 6))
-    fx_radius = S(70) + int(abs(math.sin(anim_tick * 0.2)) * S(20))
-    pygame.draw.circle(fx_surface, (C_GOLD[0], C_GOLD[1], C_GOLD[2], 80), (S(lat_r.centerx * SCALE_F), S(lat_r.centery * SCALE_F)), fx_radius)
+    # Pulsujący rdzeń ognia
+    light_val = int(abs(math.sin(anim_tick * 0.25)) * 90) + 165
+    pygame.draw.rect(surface, (light_val, int(light_val * 0.75), 20), (lat_r.x + 4, lat_r.y + 4, lat_r.w - 8, lat_r.h - 8))
+    
+    # Dynamiczny, ditherowany blask rozchodzący się kołowo na fx_surface
+    fx_radius = 110 + int(abs(math.sin(anim_tick * 0.25)) * 25)
+    center_x_fx = int(lat_r.centerx)
+    center_y_fx = int(lat_r.centery)
+    pygame.draw.circle(fx_surface, (C_GOLD[0], C_GOLD[1], C_GOLD[2], 55), (center_x_fx, center_y_fx), fx_radius)
+    pygame.draw.circle(fx_surface, (C_GOLD_LIGHT[0], C_GOLD_LIGHT[1], C_GOLD_LIGHT[2], 25), (center_x_fx, center_y_fx), fx_radius + 40)
 
 def draw_monster_pien(surface, x, y):
-    body_poly = [(x - S(40), y + S(20)), (x + S(45), y + S(25)), (x + S(30), y - S(50)), (x - S(35), y - S(45))]
-    pygame.draw.polygon(surface, C_BROWN, body_poly)
-    pygame.draw.polygon(surface, C_VOID, body_poly, 3)
-    for i in range(5):
-        dist = S(8) + i*S(6)
-        pygame.draw.ellipse(surface, C_DARK, (x - dist*1.2, y - dist - S(10), dist*2.4, dist*2), 2)
+    # Prastary pień zrośnięty z kośćmi
+    body_poly = [(x - 50, y + 25), (x + 55, y + 30), (x + 40, y - 65), (x - 45, y - 60)]
+    pygame.draw.polygon(surface, C_BROWN_DARK, body_poly)
+    pygame.draw.polygon(surface, C_VOID, body_poly, 4)
+    
+    # Słoje i pęknięcia zgniłego drewna
+    for i in range(7):
+        dist = 10 + i * 8
+        pygame.draw.ellipse(surface, C_BLACK, (x - dist * 1.2, y - dist - 15, dist * 2.4, dist * 2), 2)
+        
+    # Krwawiące, powykręcane korzenie drążące ziemię
     korzenie = [
-        [(x - S(30), y + S(15)), (x - S(50), y + S(40)), (x - S(45), y + S(45))],
-        [(x - S(10), y + S(20)), (x - S(15), y + S(55)), (x - S(5), y + S(60))],
-        [(x + S(25), y + S(20)), (x + S(40), y + S(50)), (x + S(35), y + S(55))],
+        [(x - 40, y + 20), (x - 70, y + 55), (x - 60, y + 60)],
+        [(x - 15, y + 25), (x - 20, y + 75), (x - 5, y + 80)],
+        [(x + 35, y + 25), (x + 60, y + 70), (x + 50, y + 75)],
     ]
     for korz in korzenie:
         pygame.draw.polygon(surface, C_VOID, korz)
-        pygame.draw.polygon(surface, C_BLACK, korz, 1)
-    skull_poly = [(x - S(20), y - S(25)), (x + S(18), y - S(28)), (x + S(15), y - S(5)), (x, y + S(15)), (x - S(17), y - S(8))]
+        pygame.draw.polygon(surface, C_BLACK, korz, 2)
+        # Ślady świeżej krwi na korzeniach
+        pygame.draw.line(surface, C_BLOOD, korz[0], korz[1], 2)
+        
+    # Czaszka jelenia wetknięta w środek pnia
+    skull_poly = [(x - 24, y - 35), (x + 22, y - 38), (x + 18, y - 5), (x, y + 22), (x - 20, y - 10)]
     pygame.draw.polygon(surface, C_LIGHT, skull_poly)
-    pygame.draw.polygon(surface, C_GRAY, skull_poly, 1)
-    pygame.draw.circle(surface, C_BLACK, (x - S(7), y - S(15)), S(3))
-    pygame.draw.circle(surface, C_RED, (x - S(7), y - S(15)), S(1)) 
-    pygame.draw.circle(surface, C_BLACK, (x + S(6), y - S(17)), S(3))
-    pygame.draw.circle(surface, C_RED, (x + S(6), y - S(17)), S(1))
-    draw_pixel_line(surface, C_LIGHT, (x - S(15), y - S(20)), (x - S(35), y - S(40)), 2)
-    draw_pixel_line(surface, C_GRAY, (x + S(12), y - S(22)), (x + S(25), y - S(35)), 2)
+    pygame.draw.polygon(surface, C_GRAY, skull_poly, 2)
+    # Rozżarzone, hipnotyzujące czerwienią ślepia w oczodołach
+    pygame.draw.circle(surface, C_BLACK, (x - 9, y - 20), 4)
+    pygame.draw.circle(surface, C_RED, (x - 9, y - 20), 2) 
+    pygame.draw.circle(surface, C_BLACK, (x + 8, y - 22), 4)
+    pygame.draw.circle(surface, C_RED, (x + 8, y - 22), 2)
+    # Potężne, rozgałęzione poroże z ditherem ostrości
+    draw_pixel_line(surface, C_LIGHT, (x - 18, y - 28), (x - 45, y - 60), 3)
+    draw_pixel_line(surface, C_LIGHT, (x + 15, y - 30), (x + 42, y - 62), 3)
+    draw_pixel_line(surface, C_GRAY_LIGHT, (x - 30, y - 44), (x - 55, y - 40), 1)
+    draw_pixel_line(surface, C_GRAY_LIGHT, (x + 28, y - 46), (x + 52, y - 42), 1)
 
 def draw_monster_gawron(surface, x, y):
-    wing_poly_l = [(x, y - S(30)), (x - S(60), y - S(50)), (x - S(40), y + S(10)), (x, y + S(10))]
-    wing_poly_r = [(x, y - S(30)), (x + S(60), y - S(50)), (x + S(40), y + S(10)), (x, y + S(10))]
+    # Gigantyczne, wielowarstwowe skrzydła (Indywidualne pióra procedury)
+    wing_poly_l = [(x, y - 40), (x - 85, y - 65), (x - 55, y + 20), (x, y + 20)]
+    wing_poly_r = [(x, y - 40), (x + 85, y - 65), (x + 55, y + 20), (x, y + 20)]
     pygame.draw.polygon(surface, C_VOID, wing_poly_l)
     pygame.draw.polygon(surface, C_VOID, wing_poly_r)
-    for i in range(4):
-        pygame.draw.line(surface, C_BLACK, (x - S(10), y - S(20) + i*S(6)), (x - S(55) + i*S(5), y - S(40) + i*S(8)), 2)
-        pygame.draw.line(surface, C_BLACK, (x + S(10), y - S(20) + i*S(6)), (x + S(55) - i*S(5), y - S(40) + i*S(8)), 2)
-    skull_poly = [(x - S(8), y - S(45)), (x + S(8), y - S(45)), (x + S(4), y - S(20)), (x - S(4), y - S(20))]
+    
+    # Pojedyncze rzędy piór rozcinające przestrzeń
+    for i in range(6):
+        pygame.draw.line(surface, C_BLACK, (x - 12, y - 25 + i * 8), (x - 80 + i * 7, y - 55 + i * 11), 2)
+        pygame.draw.line(surface, C_BLACK, (x + 12, y - 25 + i * 8), (x + 80 - i * 7, y - 55 + i * 11), 2)
+        
+    # Czaszka ptasia (Gawronia) w centrum
+    skull_poly = [(x - 11, y - 60), (x + 11, y - 60), (x + 6, y - 25), (x - 6, y - 25)]
     pygame.draw.polygon(surface, C_LIGHT, skull_poly)
     pygame.draw.polygon(surface, C_GRAY, skull_poly, 1)
-    beak_poly = [(x - S(2), y - S(25)), (x + S(2), y - S(25)), (x + S(1), y - S(5)), (x - S(10), y - S(15))]
-    pygame.draw.polygon(surface, C_GRAY, beak_poly)
-    pygame.draw.polygon(surface, C_BLACK, beak_poly, 1)
-    pygame.draw.circle(surface, C_BLACK, (x - S(3), y - S(35)), S(2))
-    pygame.draw.circle(surface, C_RED, (x - S(3), y - S(35)), S(1))
-    pygame.draw.circle(surface, C_BLACK, (x + S(3), y - S(35)), S(2))
-    pygame.draw.circle(surface, C_RED, (x + S(3), y - S(35)), S(1))
+    # Długi, ostry jak brzytwa dziób skąpany w posoce
+    beak_poly = [(x - 3, y - 32), (x + 3, y - 32), (x, y + 5), (x - 14, y - 18)]
+    pygame.draw.polygon(surface, C_GRAY_DARK, beak_poly)
+    pygame.draw.polygon(surface, C_BLOOD, [(x - 4, y - 10), (x, y + 5), (x - 6, y - 2)], 0)
+    
+    # Krwawe punkty widzenia krzywdy
+    pygame.draw.circle(surface, C_RED, (x - 4, y - 45), 2)
+    pygame.draw.circle(surface, C_RED, (x + 4, y - 45), 2)
 
 def draw_monster_skrzekacz(surface, x, y):
-    pygame.draw.ellipse(surface, C_VOID, (x - S(35), y - S(20), S(70), S(45)))
-    pygame.draw.ellipse(surface, C_BLACK, (x - S(25), y - S(15), S(50), S(35)), 2)
-    for i in range(4):
-        pygame.draw.circle(surface, C_DARK, (x + random.randint(-20,20), y + random.randint(-15,15)), S(4))
+    # Odrażający pajęczak o grubym chitynowym odwłoku
+    pygame.draw.ellipse(surface, C_VOID, (x - 45, y - 25, 90, 55))
+    pygame.draw.ellipse(surface, C_BLACK, (x - 35, y - 20, 70, 45), 3)
+    # Włoski i narośla sensoryczne na ciele
+    for i in range(8):
+        pygame.draw.circle(surface, C_DARK, (x + random.randint(-30, 30), y + random.randint(-20, 20)), 5)
+        
+    # Wielostawowe, owłosione odnóża
     legs = [
-        [(x - S(30), y - S(10)), (x - S(55), y - S(30)), (x - S(50), y - S(35))],
-        [(x - S(30), y + S(10)), (x - S(60), y + S(30)), (x - S(55), y + S(35))], 
-        [(x + S(30), y - S(10)), (x + S(55), y - S(30)), (x + S(50), y - S(35))], 
-        [(x + S(30), y + S(10)), (x + S(60), y + S(30)), (x + S(55), y + S(35))],
+        [(x - 40, y - 12), (x - 75, y - 40), (x - 70, y - 50)],
+        [(x - 40, y + 12), (x - 85, y + 40), (x - 75, y + 50)], 
+        [(x + 40, y - 12), (x + 75, y - 40), (x + 70, y - 50)], 
+        [(x + 40, y + 12), (x + 85, y + 40), (x + 75, y + 50)],
     ]
     for leg in legs:
         pygame.draw.polygon(surface, C_VOID, leg)
         pygame.draw.polygon(surface, C_BLACK, leg, 2)
-    eyes = [(-S(15), -S(8)), (S(18), -S(12)), (-S(5), S(10)), (S(12), S(8)), (0, -S(15))]
+        # Ostrogi na odnóżach
+        pygame.draw.line(surface, C_GRAY_DARK, leg[1], (leg[1][0] + random.randint(-5, 5), leg[1][1] + 8), 1)
+        
+    # Klaster czerwonych, lśniących oczu (Oczodoły pajęcze)
+    eyes = [(-20, -10), (22, -15), (-8, 12), (16, 10), (0, -20), (-5, -5), (6, -6)]
     for ex, ey in eyes:
-        pygame.draw.circle(surface, (255, 50, 50), (x + ex, y + ey), S(2))
-        pygame.draw.circle(surface, C_BLOOD, (x + ex, y + ey), S(3), 1)
+        pygame.draw.circle(surface, C_RED, (x + ex, y + ey), 3)
+        pygame.draw.circle(surface, C_LIGHT, (x + ex - 1, y + ey - 1), 1) # Blask oka
 
 def draw_monster_mamuna(surface, x, y, anim_tick):
-    offset_x = int(math.sin(anim_tick * 0.08) * S(5))
+    offset_x = int(math.sin(anim_tick * 0.08) * 8)
     x += offset_x
-    main_poly = [(x - S(10), y - S(70)), (x + S(12), y - S(70)), (x + S(8), y + S(40)), (x - S(8), y + S(40))]
+    
+    # Wydłużona, upiorna sylwetka w brudnym, mokrym całunie
+    main_poly = [(x - 14, y - 90), (x + 16, y - 90), (x + 11, y + 50), (x - 11, y + 50)]
     pygame.draw.polygon(surface, C_VOID, main_poly)
     pygame.draw.polygon(surface, C_BLACK, main_poly, 2)
-    for i in range(x - S(8), x + S(9), S(4)):
-        pygame.draw.line(surface, C_BLACK, (i, y - S(65)), (i + random.randint(-2,2), y + S(35)), 2)
-    pygame.draw.rect(surface, C_LIGHT, (x - S(4), y - S(60), S(8), S(12)))
-    pygame.draw.circle(surface, C_RED, (x + S(1), y - S(55)), S(1))
-    pygame.draw.line(surface, C_BLACK, (x - S(2), y - S(60)), (x - S(5), y - S(45)), 1)
-    hand_l = [(x - S(10), y - S(25)), (x - S(30), y - S(15)), (x - S(15), y - S(5))]
-    pygame.draw.polygon(surface, C_LIGHT, hand_l)
-    pygame.draw.polygon(surface, C_GRAY, hand_l, 1)
-    baby_poly = [(x - S(18), y - S(10)), (x - S(30), y - S(5)), (x - S(25), y + S(8)), (x - S(12), y + S(5))]
+    
+    # Desenie zgniłego materiału i wodorostów oblepiających ciało
+    for i in range(x - 10, x + 12, 4):
+        pygame.draw.line(surface, C_DARK_MOSS, (i, y - 80), (i + random.randint(-4, 4), y + 45), 2)
+        
+    # Blada twarz wyłaniająca się z mokrych, strzępiastych włosów
+    pygame.draw.rect(surface, C_LIGHT, (x - 6, y - 78, 12, 16))
+    pygame.draw.circle(surface, C_BLOOD, (x + 2, y - 70), 2) # Jedno świecące cyklopowe oko
+    # Czarne, obwisłe pasma włosów przysłaniające oblicze
+    for h in range(4):
+        pygame.draw.line(surface, C_BLACK, (x - 8 + h * 4, y - 85), (x - 6 + h * 4 + random.randint(-2, 2), y - 50), 2)
+        
+    # Wyciągnięte, sine dłonie trzymające martwą, drewnianą lalkę
+    hand_l = [(x - 12, y - 30), (x - 40, y - 18), (x - 20, y - 5)]
+    pygame.draw.polygon(surface, C_GRAY, hand_l)
+    
+    # Przerażająca, bezkałtna kukła niemowlęcia (Szmaciane truchło)
+    baby_poly = [(x - 24, y - 12), (x - 42, y - 5), (x - 35, y + 12), (x - 18, y + 8)]
     pygame.draw.polygon(surface, C_BROWN, baby_poly)
-    pygame.draw.circle(surface, C_BLACK, (x - S(20), y - S(2)), S(3))
-    pygame.draw.circle(surface, C_RED, (x - S(20), y - S(2)), S(1))
+    pygame.draw.circle(surface, C_BLACK, (x - 28, y - 4), 4) # Głowa lalki z wyrytymi iksami zamiast oczu
+    pygame.draw.line(surface, C_RED_DARK, (x - 30, y - 6), (x - 26, y - 2), 1)
 
 def draw_true_krzykacz(surface, x, y, anim_tick):
-    w, h = S(180), S(260) 
-    breathe = int(math.sin(anim_tick * 0.05) * S(8))
-    legs = [
-        [(x - w//3, y - h//3), (x - w, y + h//4), (x - w*0.9, y + h//3)], 
-        [(x - w//3, y), (x - w*1.1, y + h//2), (x - w*0.8, y + h//1.8)],
-        [(x + w//3, y - h//3), (x + w, y + h//4), (x + w*0.9, y + h//3)], 
-        [(x + w//3, y), (x + w*1.1, y + h//2), (x + w*0.8, y + h//1.8)], 
-    ]
-    for leg in legs:
-        pygame.draw.polygon(surface, C_VOID, leg)
-        pygame.draw.polygon(surface, C_BLACK, leg, 3) 
-    torso_poly = [(x, y - h//2 + S(30)), (x - w//2.5, y + h//2), (x + w//2.5, y + h//2)]
-    pygame.draw.polygon(surface, C_VOID, torso_poly)
-    pygame.draw.polygon(surface, C_BLACK, torso_poly, 2)
-    for i in range(6):
-        pygame.draw.circle(surface, C_DARK, (x + random.randint(-40,40), y + random.randint(-50,50)), S(8))
-    for i in range(5):
-        rib_y = y - h//2 + S(60) + (i * S(18)) + breathe
-        rib_w = S(25) + i*S(4)
-        pygame.draw.ellipse(surface, C_LIGHT, (x - rib_w//2, rib_y, rib_w, S(6)))
-        pygame.draw.ellipse(surface, C_GRAY, (x - rib_w//2, rib_y, rib_w, S(6)), 1) 
-    skull_y = y - h//2 - S(20) + breathe
-    skull_poly = [(x - S(30), skull_y), (x + S(30), skull_y), (x + S(5), skull_y + S(50)), (x - S(5), skull_y + S(50))]
-    pygame.draw.polygon(surface, C_LIGHT, skull_poly)
-    pygame.draw.polygon(surface, C_GRAY, skull_poly, 1)
-    pygame.draw.circle(surface, C_BLACK, (x - S(12), skull_y + S(20)), S(5))
-    pygame.draw.circle(surface, C_BLOOD, (x - S(12), skull_y + S(20)), S(2)) 
-    pygame.draw.circle(surface, C_BLACK, (x + S(12), skull_y + S(20)), S(5))
-    pygame.draw.circle(surface, C_BLOOD, (x + S(12), skull_y + S(20)), S(2))
-    draw_pixel_line(surface, C_LIGHT, (x - S(20), skull_y), (x - S(70), skull_y - S(60)), 3)
-    draw_pixel_line(surface, C_LIGHT, (x - S(40), skull_y - S(30)), (x - S(80), skull_y - S(20)), 2)
-    draw_pixel_line(surface, C_LIGHT, (x + S(20), skull_y), (x + S(70), skull_y - S(60)), 3)
-    draw_pixel_line(surface, C_LIGHT, (x + S(40), skull_y - S(30)), (x + S(80), skull_y - S(20)), 2)
-
-def draw_lesny_dziadek(surface, x, y):
-    pygame.draw.polygon(surface, C_GRAY, [(x - 8, y), (x + 8, y), (x + 5, y + 22), (x - 5, y + 22)])
-    pygame.draw.polygon(surface, C_DARK, [(x - 8, y), (x + 8, y), (x + 5, y + 22), (x - 5, y + 22)], 1)
-    broda_poly = [(x - 7, y - 5), (x + 7, y - 6), (x + 4, y + 15), (x, y + 18), (x - 4, y + 15)]
-    pygame.draw.polygon(surface, C_LIGHT, broda_poly)
-    pygame.draw.polygon(surface, C_GRAY, broda_poly, 1) 
-    pygame.draw.circle(surface, C_VOID, (x, y - 10), S(6))
-    pygame.draw.circle(surface, C_BLACK, (x, y - 10), S(7), 1)
-    pygame.draw.circle(surface, C_RED, (x - 1, y - 11), S(1))
-    pygame.draw.line(surface, C_BROWN, (x + 12, y - 25), (x + 12, y + 25), S(3))
-    pygame.draw.rect(surface, C_BLACK, (x + 10, y - 25, S(4), S(50)), 1) 
-
-def draw_wielkie_drzewo(surface, x, y):
-    pygame.draw.polygon(surface, C_VOID, [(x-S(40), y+S(50)), (x+S(50), y+S(40)), (x+S(30), y-S(100)), (x-S(45), y-S(90))])
-    pygame.draw.polygon(surface, C_BLACK, [(x-S(40), y+S(50)), (x+S(50), y+S(40)), (x+S(30), y-S(100)), (x-S(45), y-S(90))], S(3))
-    for i in range(6):
-        dist = S(15) + i*S(8)
-        pygame.draw.ellipse(surface, C_DARK, (x - dist*1.3, y - dist*2 - S(20), dist*2.6, dist*4), 2)
-    face_r = pygame.Rect(x - S(10), y - S(60), S(20), S(30))
-    pygame.draw.ellipse(surface, C_VOID, face_r)
-    pygame.draw.ellipse(surface, C_BLACK, face_r, 2)
-    pygame.draw.circle(surface, C_RED, (x - S(4), y - S(50)), S(2))
-    pygame.draw.circle(surface, C_RED, (x + S(4), y - S(48)), S(2))
-    pygame.draw.ellipse(surface, C_BLACK, (x - S(3), y - S(40), S(6), S(10)))
-    pygame.draw.polygon(surface, C_VOID, [(x-S(15), y-S(90)), (x-S(100), y-S(130)), (x-S(60), y-S(160)), (x+S(5), y-S(110))])
-    pygame.draw.polygon(surface, C_BLACK, [(x-S(15), y-S(90)), (x-S(100), y-S(130)), (x-S(60), y-S(160)), (x+S(5), y-S(110))], 1)
-    pygame.draw.polygon(surface, C_VOID, [(x+S(15), y-S(90)), (x+S(100), y-S(130)), (x+S(60), y-S(160)), (x-S(5), y-S(110))])
-    pygame.draw.polygon(surface, C_BLACK, [(x+S(15), y-S(90)), (x+S(100), y-S(130)), (x+S(60), y-S(160)), (x-S(5), y-S(110))], 1)
-
-# --- PORTRETY UI ---
-def draw_portrait_base(surface, x, y, size=70):
-    pygame.draw.rect(surface, (5, 5, 10), (x - size//2, y - size//2, size, size))
-    pygame.draw.rect(surface, C_GRAY, (x - size//2, y - size//2, size, size), 2)
-
-def draw_soltys(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    pygame.draw.polygon(surface, C_VOID, [(x - 22, y + 20), (x + 18, y + 15), (x + 22, y + 35), (x - 25, y + 35)])
-    pygame.draw.polygon(surface, C_BLACK, [(x - 22, y + 20), (x + 18, y + 15), (x + 22, y + 35), (x - 25, y + 35)], 2)
-    pygame.draw.rect(surface, C_SKIN, (x - 14, y - 10, 26, 26))
-    pygame.draw.polygon(surface, C_BLACK, [(x - 14, y - 10), (x + 12, y - 10), (x + 12, y + 16), (x - 14, y + 16)], 2)
-    pygame.draw.polygon(surface, C_GRAY, [(x - 14, y + 8), (x - 16, y + 25), (x + 4, y + 18)]) 
-    pygame.draw.circle(surface, C_RED, (x - 6, y - 2), 3)
-    pygame.draw.line(surface, C_BLACK, (x + 6, y - 3), (x + 10, y - 1), 3)
-
-def draw_zielarka(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    pygame.draw.polygon(surface, C_VOID, [(x, y - 15), (x - 30, y + 35), (x + 20, y + 35)])
-    pygame.draw.polygon(surface, C_BLACK, [(x, y - 15), (x - 30, y + 35), (x + 20, y + 35)], 2)
-    pygame.draw.polygon(surface, C_SKIN, [(x - 10, y - 12), (x + 8, y - 15), (x, y + 10)])
-    pygame.draw.polygon(surface, C_BLACK, [(x - 10, y - 12), (x + 8, y - 15), (x, y + 10)], 2)
-    pygame.draw.circle(surface, C_VOID, (x - 4, y - 5), 4)
-    pygame.draw.circle(surface, C_LIGHT, (x - 4, y - 5), 1)
-
-def draw_maciek(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    pygame.draw.rect(surface, C_VOID, (x - 20, y + 10, 35, 25))
-    pygame.draw.rect(surface, C_BLACK, (x - 20, y + 10, 35, 25), 2)
-    pygame.draw.polygon(surface, C_SKIN, [(x - 15, y - 10), (x, y - 18), (x + 8, y + 3), (x - 10, y + 5)])
-    pygame.draw.polygon(surface, C_BLACK, [(x - 15, y - 10), (x, y - 18), (x + 8, y + 3), (x - 10, y + 5)], 2)
-    pygame.draw.rect(surface, C_VOID, (x - 8, y - 8, 5, 4))
-    pygame.draw.rect(surface, C_VOID, (x + 2, y - 10, 4, 3))
-
-def draw_maria(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    pygame.draw.polygon(surface, C_GRAY, [(x - 6, y), (x - 25, y + 35), (x + 20, y + 35)])
-    pygame.draw.polygon(surface, C_BLACK, [(x - 6, y), (x - 25, y + 35), (x + 20, y + 35)], 2)
-    pygame.draw.polygon(surface, C_LIGHT, [(x - 8, y - 20), (x + 10, y - 18), (x + 6, y + 3), (x - 6, y + 5)])
-    pygame.draw.polygon(surface, C_BLACK, [(x - 8, y - 20), (x + 10, y - 18), (x + 6, y + 3), (x - 6, y + 5)], 2)
-    pygame.draw.circle(surface, C_RED, (x - 3, y - 10), 3)
-    pygame.draw.circle(surface, C_VOID, (x + 6, y - 12), 4)
-
-def draw_szef_drwali(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    # Ubranie
-    pygame.draw.polygon(surface, C_VOID, [(x-25, y+35), (x+25, y+35), (x+20, y-10), (x-20, y-10)])
-    pygame.draw.polygon(surface, C_BLACK, [(x-25, y+35), (x+25, y+35), (x+20, y-10), (x-20, y-10)], 2)
-    # Twarz
-    pygame.draw.rect(surface, C_SKIN, (x-12, y-20, 24, 28))
-    # Duży nos
-    pygame.draw.ellipse(surface, (210, 150, 120), (x-6, y-6, 12, 12))
-    # Brązowa broda
-    pygame.draw.polygon(surface, (80, 50, 30), [(x-15, y), (x+15, y), (x+10, y+22), (x-10, y+22)])
-    # Kowbojski kapelusz
-    pygame.draw.ellipse(surface, (110, 75, 45), (x-22, y-25, 44, 14))
-    pygame.draw.rect(surface, (110, 75, 45), (x-14, y-38, 28, 18))
-    pygame.draw.line(surface, C_BLACK, (x-14, y-25), (x+14, y-25), 2)
-    # Oczy
-    pygame.draw.circle(surface, C_BLACK, (x-5, y-12), 2)
-    pygame.draw.circle(surface, C_BLACK, (x+5, y-12), 2)
-
-def draw_sprzedawca(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    pygame.draw.polygon(surface, C_LIGHT, [(x-10, y-15), (x+8, y-20), (x+6, y+8), (x-8, y+4)])
-    pygame.draw.polygon(surface, C_BLACK, [(x-10, y-15), (x+8, y-20), (x+6, y+8), (x-8, y+4)], 2)
-    pygame.draw.circle(surface, C_VOID, (x-4, y-9), 4)
-    pygame.draw.circle(surface, C_VOID, (x+5, y-11), 3)
-    pygame.draw.line(surface, C_BLACK, (x-6, y), (x+6, y-5), 3)
-
-def draw_menel(surface, x, y):
-    draw_portrait_base(surface, x, y)
-    pygame.draw.polygon(surface, C_GRAY, [(x-22, y+35), (x+18, y+35), (x+8, y+10), (x-15, y+15)])
-    pygame.draw.polygon(surface, C_BLACK, [(x-22, y+35), (x+18, y+35), (x+8, y+10), (x-15, y+15)], 2)
-    pygame.draw.rect(surface, C_SKIN, (x-10, y-8, 16, 18))
-    pygame.draw.rect(surface, C_BLACK, (x-10, y-8, 16, 18), 2)
-    pygame.draw.circle(surface, C_RED, (x-5, y-2), 2)
-    pygame.draw.circle(surface, C_RED, (x+3, y-3), 2)
-
-# --- FUNKCJE POMOCNICZE ---
-def draw_text_wrapped(surface, text, font, color, x, y, max_width):
-    paragraphs = text.split('\n')
-    y_offset = 0
-    font_height = font.size('Tg')[1]
-    for paragraph in paragraphs:
-        words = paragraph.split(' ')
-        line = []
-        for word in words:
-            test_line = ' '.join(line + [word])
-            width, _ = font.size(test_line)
-            if width <= max_width:
-                line.append(word)
-            else:
-                text_surface = font.render(' '.join(line), True, color)
-                surface.blit(text_surface, (x, y + y_offset))
-                y_offset += font_height + 2
-                line = [word]
-        if line:
-            text_surface = font.render(' '.join(line), True, color)
-            surface.blit(text_surface, (x, y + y_offset))
-            y_offset += font_height + 2
-    return y_offset
-
-def apply_atmosphere(surface):
-    vignette = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
-    pygame.draw.rect(vignette, (C_BLACK[0], C_BLACK[1], C_BLACK[2], 240), (0, 0, LOW_W, LOW_H), S(30))
-    pygame.draw.rect(vignette, (C_BLACK[0], C_BLACK[1], C_BLACK[2], 160), (S(30), S(30), LOW_W-S(60), LOW_H-S(60)), S(25))
-    surface.blit(vignette, (0, 0))
+    # Absolutne arcydzieło lasu - Kolos ucieleśnienia pierwotnego strachu
+    w, h = 240, 320
+    breathe = int(math.sin(anim_tick * 0.05) * 15)
     
-    fog = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
-    pygame.draw.rect(fog, (C_GRAY[0], C_GRAY[1], C_GRAY[2], 50), (0, LOW_H - S(80), LOW_W, S(80)))
-    for i in range(10):
-        fx, fy = random.randint(0, LOW_W), random.randint(LOW_H - S(100), LOW_H)
-        pygame.draw.circle(fog, (C_DARK[0], C_DARK[1], C_DARK[2], 30), (fx, fy), S(40))
-    surface.blit(fog, (0, 0))
+    # Ciało z czystej nicości (Wielka plama pochłaniająca światło)
+    body_rect = pygame.Rect(x - w//2, y - h//2, w, h)
+    pygame.draw.ellipse(surface, C_VOID, body_rect)
+    
+    # Cybernetyczno-organiczna sieć neonowo-zielonych żył pulsujących sokami lasu
+    for i in range(8):
+        phase = anim_tick * 0.1 + i
+        v_y = y - h//2 + 30 + i * 35
+        v_x_offset = int(math.sin(phase) * 40)
+        # Rysowanie neonowej linii pulsu energetycznego
+        pygame.draw.line(surface, (20, 220, 80), (x - 60 + v_x_offset, v_y), (x + 60 - v_x_offset, v_y + 15), 2)
+        
+    # Monumentalne, gotyckie poroże rozciągające się na pół ekranu
+    # Lewe gigantyczne poroże
+    draw_pixel_line(surface, C_BLACK, (x - 30, y - h//2 + 40), (x - 130, y - h//2 - 60), 6)
+    draw_pixel_line(surface, C_DARK, (x - 80, y - h//2 - 10), (x - 160, y - h//2 - 20), 4)
+    draw_pixel_line(surface, C_GRAY_DARK, (x - 110, y - h//2 - 40), (x - 190, y - h//2 - 90), 3)
+    # Prawe gigantyczne poroże
+    draw_pixel_line(surface, C_BLACK, (x + 30, y - h//2 + 40), (x + 130, y - h//2 - 60), 6)
+    draw_pixel_line(surface, C_DARK, (x + 80, y - h//2 - 10), (x + 160, y - h//2 - 20), 4)
+    draw_pixel_line(surface, C_GRAY_DARK, (x + 110, y - h//2 - 40), (x + 190, y - h//2 - 90), 3)
+    
+    # Matryca potępionych oczu (Dziesiątki czerwono-złotych punktów śledzących gracza)
+    for row in range(4):
+        for col in range(5):
+            ex = x - 60 + col * 30 + (row % 2) * 15 + int(math.sin(anim_tick*0.02 + row)*5)
+            ey = y - 40 + row * 25 + breathe // 2
+            pygame.draw.circle(surface, C_BLACK, (ex, ey), 5)
+            pygame.draw.circle(surface, C_GOLD if row % 2 == 0 else C_RED, (ex, ey), 2)
 
-    noise_surf = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
-    for i in range(5000): 
-        nx, ny = random.randint(0, LOW_W-1), random.randint(0, LOW_H-1)
-        gray = random.randint(5, 50)
-        alpha = random.randint(10, 80)
-        noise_surf.set_at((nx, ny), (gray, gray, gray + 5, alpha))
-    surface.blit(noise_surf, (0, 0))
+# ==============================================================================
+# --- ZAAWANSOWANE ZASŁONY ATMOSFERYCZNE (MROK, MGŁA, SKANOWANIE) ---
+# ==============================================================================
+def apply_atmosphere(surface):
+    # 1. Nakładanie dynamicznego blasku świateł z fx_surface
+    surface.blit(fx_surface, (0, 0))
+    
+    # 2. Skanowanie linii (Scanlines) oraz winieta potęgująca klaustrofobię i lęk
+    # Rysowanie linii retro-kineskopu
+    for y in range(0, LOW_H, 3):
+        pygame.draw.line(surface, (0, 0, 0, 15), (0, y), (LOW_W, y), 1)
+        
+    # Elektroniczny szum/ziarno creepypasty (Ditherowany mrok na krawędziach ekranu)
+    vignette_width = 80
+    # Lewa winieta
+    pygame.draw.rect(surface, C_VOID, (0, 0, vignette_width - 30, LOW_H))
+    apply_dither_rect(surface, pygame.Rect(vignette_width - 30, 0, 40, LOW_H), C_VOID, (0,0,0,0), 2)
+    # Prawa winieta
+    pygame.draw.rect(surface, C_VOID, (LOW_W - vignette_width + 30, 0, vignette_width - 30, LOW_H))
+    apply_dither_rect(surface, pygame.Rect(LOW_W - vignette_width, 0, 40, LOW_H), C_VOID, (0,0,0,0), 2)
 
 class Projectile:
     def __init__(self, x, y, vx, vy, color, radius=5):
