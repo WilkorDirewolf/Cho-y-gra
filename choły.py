@@ -851,10 +851,10 @@ while running:
                         boss_hp = boss_max_hp = 100 + (boss_mod_stamina * 5)
                         break
             
-            elif current_map == "STRANGE_PLACE":
-                if pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2 - 50)) < 70:
-                    current_state = STATE_DIALOGUE
-                    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, c_code="TALK_TO_TREE"))
+                    elif current_map == "STRANGE_PLACE":
+                        if pygame.Vector2(player_pos.x, player_pos.y).distance_to(pygame.Vector2(WIDTH//2, HEIGHT//2 - 50)) < 70:
+                                current_state = STATE_DIALOGUE
+                                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, c_code="TALK_TO_TREE"))
 
     # WALKA - ARENA
     elif current_state == STATE_COMBAT:
