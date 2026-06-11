@@ -4,6 +4,14 @@ import random
 import math
 import numpy as np
 from collections import defaultdict
+import os
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 # --- INICJALIZACJA DŹWIĘKU I PYGAME ---
 pygame.mixer.pre_init(44100, -16, 2, 2048)
