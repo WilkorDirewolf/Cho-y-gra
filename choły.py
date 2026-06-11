@@ -27,9 +27,6 @@ fx_surface = pygame.Surface((LOW_W, LOW_H), pygame.SRCALPHA)
 def S(val):
     return int(val / SCALE_F)
 
-def S(val):
-    return int(val)
-
 # Mroczna paleta barw z przejściami tonalnymi
 C_BLACK = (4, 4, 7)
 C_VOID = (12, 11, 16)
