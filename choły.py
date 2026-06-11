@@ -506,9 +506,9 @@ def apply_atmosphere(surface):
 
 # --- SILNIK TEKSTOWY ---
 pygame.font.init()
-font_title = pygame.font.SysFont("Times New Roman", 46, bold=True)
-font_main = pygame.font.SysFont("Courier New", 20, bold=True)
-font_sub = pygame.font.SysFont("Courier New", 15)
+font_title = pygame.font.SysFont("Arial", 46, bold=True)
+font_main = pygame.font.SysFont("Arial", 20, bold=True)
+font_sub = pygame.font.SysFont("Arial", 15)
 
 def draw_text_wrapped(surface, text, font, color, x, y, max_width):
     paragraphs = text.split('\n')
