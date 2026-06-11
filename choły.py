@@ -1843,7 +1843,7 @@ while running:
                     pygame.draw.rect(game_surface, C_VOID, (hx - S(60), hy + S(10), S(120), S(40)))
                     pygame.draw.rect(game_surface, C_BLACK, (hx - S(60), hy + S(10), S(120), S(40)), 2)
                     draw_npc_soltys(game_surface, hx, hy)
-                elif "Zielark" in h_name:
+                elif "Zielarka" in h_name:
                     pygame.draw.ellipse(game_surface, C_BLACK, (hx - S(40), hy + S(20), S(40), S(30)))
                     pygame.draw.ellipse(game_surface, C_DARK, (hx - S(40), hy + S(20), S(40), S(30)), 2)
                     pygame.draw.ellipse(game_surface, (50, 100, 30), (hx - S(35), hy + S(22), S(30), S(10)))
@@ -1925,7 +1925,7 @@ while running:
             avatar_x, avatar_y = 90, HEIGHT - 210
             
             if "Sołtys" in dialogue_title: draw_soltys(screen, avatar_x, avatar_y)
-            elif "Zielark" in dialogue_title: draw_zielarka(screen, avatar_x, avatar_y)
+            elif "Zielarka" in dialogue_title: draw_zielarka(screen, avatar_x, avatar_y)
             elif "Plebania" in dialogue_title or "Maciek" in combined_dialogue: draw_maciek(screen, avatar_x, avatar_y)
             elif "Choroszcz" in dialogue_title or "Maria" in combined_dialogue: draw_maria(screen, avatar_x, avatar_y)
             elif "Drwal" in dialogue_title or "Drwal" in combined_dialogue: draw_szef_drwali(screen, avatar_x, avatar_y)
