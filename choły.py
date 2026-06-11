@@ -674,15 +674,21 @@ def get_sklep_dialogue():
     return ("Sklep 'Słodycze Wina'. Półki świecą pustkami.\nSprzedawca: Czego dusza pragnie?", choices)
 
 # Scalona lista domków do interakcji oraz renderowania
+# Scalona lista domków do interakcji oraz renderowania
 houses = [
-    House(150, 150, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue, "soltys"),
-    House(450, 250, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, "zuk"),
-    House(600, 100, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, "mossy", True),
-    House(150, 400, 130, 90, "Sklep 'Słodycze Wina'", get_sklep_dialogue, "abandoned"),
-    House(400, 450, 150, 130, "Plebania (Maciek)", get_plebania_dialogue, "forge"),
-    House(650, 450, 130, 90, "Chata po starym Mikołaju", get_bed_dialogue, "abandoned"),
-    House(800, 150, 140, 100, "Namiot Starej Zielarki", get_zielarka_dialogue, "mossy"),
-    House(360, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue, "forge")
+    # LEWA STRONA (Władza, handel i duchowieństwo)
+    House(80, 60, 160, 110, "Dom Sołtysa Bieniasza", get_soltys_dialogue, "soltys"),
+    House(80, 260, 130, 90, "Sklep 'Słodycze Wina'", get_sklep_dialogue, "abandoned"),
+    House(80, 440, 150, 130, "Plebania (Maciek)", get_plebania_dialogue, "forge"),
+    
+    # CENTRUM (Plac wiejski - pamiętaj, że studnia jest na (490, 420))
+    House(400, 80, 140, 60, "Wóz (Żuk)", get_zuk_dialogue, "zuk"),
+    House(380, 520, 160, 90, "Obóz Drwali (Urząd)", get_drwale_dialogue, "forge"),
+    
+    # PRAWA STRONA (Głusz, tajemnice i obrzeża lasu)
+    House(720, 60, 140, 100, "Namiot Starej Zielarki", get_zielarka_dialogue, "mossy"),
+    House(720, 240, 150, 110, "Spalona Chata Marii", get_ruiny_dialogue, "mossy", True),
+    House(720, 440, 130, 90, "Chata po starym Mikołaju", get_bed_dialogue, "abandoned")
 ]
 
 decorations_trees = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(15)]
