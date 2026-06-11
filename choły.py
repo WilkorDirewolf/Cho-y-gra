@@ -140,6 +140,26 @@ slavic_sound.play(loops=-1, fade_ms=1000)
 barka_sound = pygame.sndarray.make_sound(generate_barka_theme())
 barka_sound.set_volume(0.3)
 
+# --- STANY GRY ---
+STATE_INTRO = "INTRO"
+STATE_EXPLORE = "EXPLORE"
+STATE_HOUSE = "HOUSE"
+STATE_DIALOGUE = "DIALOGUE"
+STATE_TRANSITION = "TRANSITION"
+STATE_DICE_ROLL = "DICE_ROLL"
+STATE_COMBAT = "COMBAT"
+STATE_RUNNER = "RUNNER"
+STATE_END = "END"
+
+# --- BLOK DEFINICJI BOSSÓW ---
+BOSS_MAMUNA = "MAMUNA (Pani Lasu)"
+BOSS_LATARNIK = "LATARNIK (Zwodzący Cień)"
+BOSS_PIEN = "PIEŃ (Zgniły Strażnik)"
+BOSS_GAWRON = "GAWRON (Czarny Anioł)"
+BOSS_SKRZEKACZ = "SKRZEKACZ (Demon)"
+BOSS_KRZYKACZ_FOREST = "MŁODY KRZYKACZ"
+BOSS_TRUE_KRZYKACZ = "KRZYKACZ (Ucieleśnienie Lasu)"
+
 # --- POSTACIE (SZCZEGÓŁOWE MODELE ANATOMICZNE) ---
 def draw_drozd(surface, x, y):
     pygame.draw.rect(surface, C_BLACK, (x - 6, y + 16, 4, 14))
