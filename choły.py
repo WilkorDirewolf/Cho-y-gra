@@ -168,6 +168,14 @@ C_DARK_GREEN = (15, 40, 20)
 C_DEEP_BLUE = (10, 15, 45)
 C_PURE_WHITE = (255, 255, 255)
 
+# --- LOKACJE W WIOSCE ---
+village_houses_data = [
+    {"name": "Chata Sołtysa", "x": 380, "y": 150, "type": "soltys", "target_state": STATE_DIALOGUE, "npc": "SOLTYS"},
+    {"name": "Kuźnia Maćka", "x": 700, "y": 300, "type": "forge", "target_state": STATE_DIALOGUE, "npc": "MACIEK"},
+    {"name": "Chatka Zielarki", "x": 100, "y": 350, "type": "mossy", "target_state": STATE_DIALOGUE, "npc": "ZIELARKA"},
+    {"name": "Opuszczony Dom (Lusia)", "x": 550, "y": 500, "type": "abandoned", "target_state": STATE_EXPLORE, "npc": "LUSIA"}
+]
+
 # --- POSTACIE (SZCZEGÓŁOWE MODELE ANATOMICZNE) ---
 def draw_drozd(surface, x, y):
     pygame.draw.rect(surface, C_BLACK, (x - 6, y + 16, 4, 14))
@@ -401,20 +409,89 @@ def draw_true_krzykacz(surface, x, y, anim_tick):
     draw_pixel_line(surface, C_LIGHT, (x + 20, skull_y), (x + 70, skull_y - 60), 3)
 
 # --- ARCHITEKTURA I ŚRODOWISKO ---
-def draw_uncanny_house(surface, x, y, width=170, height=120, ruined=False):
-    if ruined:
-        pygame.draw.rect(surface, (35, 30, 32), (x, y + 30, width, height - 30))
-        pygame.draw.polygon(surface, C_VOID, [(x - 10, y + 30), (x + width//3, y - 10), (x + width - 20, y + 30)])
-    else:
-        pygame.draw.rect(surface, (90, 80, 70), (x, y, width, height))
-        pygame.draw.rect(surface, C_BLACK, (x, y, width, height), 2)
-        roof_poly = [(x - 20, y), (x + width // 2, y - 80), (x + width + 20, y)]
-        pygame.draw.polygon(surface, (55, 45, 45), roof_poly)
-        pygame.draw.polygon(surface, C_BLACK, roof_poly, 3)
-        pygame.draw.rect(surface, C_BROWN_DARK, (x + width//2 - 20, y + height - 55, 40, 55))
-        win_rect = pygame.Rect(x + 25, y + 30, 35, 40)
-        pygame.draw.rect(surface, C_VOID, win_rect)
-        apply_dither_rect(surface, pygame.Rect(x + 27, y + 32, 31, 36), (70, 50, 20), C_VOID, 2)
+def draw_village_house(surface, base_x, base_y, house_type, is_highlighted=False):
+    """
+    Rysuje dom w stylu pixel-art z drzwiami, oknami i unikalnymi detalami.
+    Zwraca pozycję drzwi (środek), aby można było łatwo policzyć dystans od gracza.
+    """
+    # Kolory bazowe
+    C_WOOD_DARK = (45, 30, 20)
+    C_WOOD_LIGHT = (70, 50, 35)
+    C_THATCH = (90, 85, 50)  # Strzecha
+    C_STONE = (60, 65, 70)
+    C_WINDOW = (200, 180, 50) if house_type != "abandoned" else (10, 10, 15) # Światło w oknach
+    
+    # Parametry domyślne (zwykła chata)
+    w, h = S(120), S(70)
+    wall_color = C_WOOD_LIGHT
+    roof_color = C_THATCH
+    has_chimney = True
+    
+    # RÓŻNICE MIĘDZY BUDYNKAMI
+    if house_type == "soltys":
+        w, h = S(160), S(90) # Największy dom
+        wall_color = C_WOOD_DARK
+        roof_color = (110, 40, 30) # Czerwony, bogaty dach
+    elif house_type == "forge":
+        w, h = S(100), S(80)
+        wall_color = C_STONE # Kamienna kuźnia
+        roof_color = (50, 50, 50)
+    elif house_type == "mossy":
+        w, h = S(90), S(60)
+        wall_color = (35, 40, 30) # Zgniłe, zielonkawe drewno
+        roof_color = (25, 35, 20)
+        has_chimney = False
+    elif house_type == "abandoned":
+        w, h = S(110), S(65)
+        wall_color = (40, 40, 45) # Szare, stare drewno
+        roof_color = (30, 30, 30)
+
+    x, y = S(base_x), S(base_y)
+    
+    # 1. ŚCIANY
+    pygame.draw.rect(surface, wall_color, (x, y, w, h))
+    # Tekstura desek/kamienia (proste linie)
+    for i in range(1, 4):
+        pygame.draw.line(surface, C_BLACK, (x, y + (h//4)*i), (x + w, y + (h//4)*i), 1)
+
+    # 2. DACH
+    pygame.draw.polygon(surface, roof_color, [(x - S(10), y), (x + w + S(10), y), (x + w//2, y - S(40))])
+    
+    # Komin
+    if has_chimney:
+        pygame.draw.rect(surface, C_STONE, (x + w - S(30), y - S(35), S(15), S(25)))
+
+    # 3. OKNA
+    win_size = S(15)
+    win_y = y + S(20)
+    # Lewe okno
+    pygame.draw.rect(surface, C_WINDOW, (x + S(20), win_y, win_size, win_size))
+    pygame.draw.rect(surface, C_BLACK, (x + S(20), win_y, win_size, win_size), 1) # Rama
+    if w > S(100): # Prawe okno tylko dla szerszych domów
+        pygame.draw.rect(surface, C_WINDOW, (x + w - S(35), win_y, win_size, win_size))
+        pygame.draw.rect(surface, C_BLACK, (x + w - S(35), win_y, win_size, win_size), 1)
+
+    # 4. DRZWI (Zawsze na środku dolnej krawędzi budynku)
+    door_w, door_h = S(24), S(35)
+    door_x = x + (w // 2) - (door_w // 2)
+    door_y = y + h - door_h
+    
+    # Rysowanie drzwi
+    pygame.draw.rect(surface, (30, 20, 15), (door_x, door_y, door_w, door_h))
+    pygame.draw.circle(surface, C_BLACK, (door_x + door_w - S(5), door_y + door_h // 2), S(2)) # Klamka
+
+    # PODŚWIETLENIE DRZWI (gdy gracz jest blisko)
+    if is_highlighted:
+        pygame.draw.rect(surface, C_LIGHT, (door_x - 1, door_y - 1, door_w + 2, door_h + 2), 2)
+        # Mała strzałka nad drzwiami
+        pygame.draw.polygon(surface, C_LIGHT, [
+            (door_x + door_w//2, door_y - S(5)), 
+            (door_x + door_w//2 - S(4), door_y - S(12)), 
+            (door_x + door_w//2 + S(4), door_y - S(12))
+        ])
+
+    # Zwracamy nieskalowaną pozycję środka drzwi do obliczeń matematycznych w grze
+    return base_x + (w * SCALE_F // 2), base_y + (h * SCALE_F)
 
 def draw_tree(surface, x, y):
     pygame.draw.polygon(surface, C_BLACK, [(x - 12, y + 15), (x + 14, y + 12), (x + 8, y - 60), (x + 2, y - 130), (x - 10, y - 50)])
@@ -1689,7 +1766,61 @@ while running:
             pygame.draw.rect(screen, col, (WIDTH//2 - 100 + i*20, HEIGHT//2, S(15), S(15)))
         screen.blit(font_title.render("Wejście w mrok...", True, C_GRAY), (WIDTH//2 - 120, HEIGHT - 180))
 
-    elif current_state in [STATE_EXPLORE, STATE_HOUSE, STATE_DIALOGUE, STATE_DICE_ROLL]:
+    # 1. NOWY, OSOBNY BLOK DLA EKSPLORACJI WIOSKI (Wklejasz to co przygotowaliśmy)
+    elif current_state == STATE_EXPLORE:
+        # --- OBSŁUGA RUCHU DROZDA ---
+        speed = 4
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:  player_x -= speed
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]: player_x += speed
+        if keys[pygame.K_UP] or keys[pygame.K_w]:    player_y -= speed
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:  player_y += speed
+
+        player_x = max(20, min(WIDTH - 20, player_x))
+        player_y = max(150, min(HEIGHT - 40, player_y))
+
+        game_surface.fill(C_BLACK)
+        
+        nearest_house = None
+        min_dist = 50
+
+        # Rysowanie budynków i sprawdzanie drzwi
+        for house in village_houses_data:
+            door_x, door_y = draw_village_house(game_surface, house["x"], house["y"], house["type"], is_highlighted=False)
+            distance = math.hypot(player_x - door_x, player_y - door_y)
+            if distance < min_dist:
+                min_dist = distance
+                nearest_house = house
+
+        if nearest_house:
+            draw_village_house(game_surface, nearest_house["x"], nearest_house["y"], nearest_house["type"], is_highlighted=True)
+
+        draw_drozd(game_surface, S(player_x), S(player_y))
+        
+        apply_atmosphere(game_surface)
+        screen.blit(pygame.transform.scale(game_surface, (WIDTH, HEIGHT)), (0, 0))
+
+        # Interakcja i napisy
+        if nearest_house:
+            prompt_txt = font_main.render(f"[E] Wejdź: {nearest_house['name']}", True, C_LIGHT)
+            screen.blit(prompt_txt, (WIDTH // 2 - prompt_txt.get_width() // 2, HEIGHT - 60))
+            
+            if keys[pygame.K_e]:
+                if nearest_house["npc"] == "SOLTYS":
+                    current_state = STATE_DIALOGUE
+                    current_npc = "SOLTYS"
+                elif nearest_house["npc"] == "MACIEK":
+                    current_state = STATE_DIALOGUE
+                    current_npc = "MACIEK"
+                elif nearest_house["npc"] == "ZIELARKA":
+                    current_state = STATE_DIALOGUE
+                    current_npc = "ZIELARKA"
+                elif nearest_house["npc"] == "LUSIA":
+                    current_state = STATE_COMBAT
+                    current_enemy = BOSS_MAMUNA
+                    player_hp = player_max_hp
+                    enemy_hp = 150
+
+    elif current_state in [STATE_HOUSE, STATE_DIALOGUE, STATE_DICE_ROLL]:
         game_surface.fill(C_BLACK)
         fx_surface.fill((0, 0, 0, 0))
         
@@ -1742,7 +1873,7 @@ while running:
                     if "Wóz (Żuk)" in h.name:
                         draw_zuk(game_surface, S(h.rect.centerx), S(h.door_rect.centery - 15), light=False)
                     else:
-                        draw_uncanny_house(game_surface, S(h.rect.x), S(h.rect.y), S(h.rect.width), S(h.rect.height), ruined=h.ruined)
+                        draw_village_house(game_surface, S(h.rect.x), S(h.rect.y), S(h.rect.width), S(h.rect.height), ruined=h.ruined)
                     
                     pygame.draw.ellipse(game_surface, (15, 12, 10), (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)))
                     pygame.draw.ellipse(game_surface, C_BLACK, (S(h.door_rect.x), S(h.door_rect.y), S(h.door_rect.w), S(h.door_rect.h)), 1)
